@@ -7,7 +7,7 @@ namespace Voxelion.Game.Scenes
 {
     public abstract class SceneBase
     {
-        public bool IsLoaded { "protected set; get; " } = false;
+        public bool IsLoaded { get; protected set; } = false;
 
         public virtual void LoadContent()
         {
