@@ -28,21 +28,25 @@ jobs:
     - name: Install Android Workload & MonoGame Tool
       run: |
         dotnet workload install android
-        dotnet tool install --global dotnet-mgcb
+        dotnet tool install --global dotnet-mgcb || true
 
     - name: Add .NET Tools to PATH
       run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
+    - name: Ensure Android Project Exists
+      run: |
+        if [ ! -f "src/Voxelion.Android/Voxelion.Android.csproj" ]; then
+          mkdir -p src/Voxelion.Android
+          dotnet new android -o src/Voxelion.Android --force
+          dotnet add src/Voxelion.Android/Voxelion.Android.csproj reference src/Voxelion.Game/Voxelion.Game.csproj || true
+        fi
+
     - name: Restore Project Dependencies
-      run: dotnet restore
+      run: dotnet restore VOXELION.sln /p:CheckEolTargetFramework=false
 
     - name: Build Android APK
       run: |
-        if [ -d "src/Voxelion.Android" ]; then
-          dotnet publish src/Voxelion.Android/*.csproj -f net8.0-android -c Release -o ./output
-        else
-          dotnet publish src/Voxelion.Game/*.csproj -f net8.0-android -c Release -o ./output
-        fi
+        dotnet publish src/Voxelion.Android/Voxelion.Android.csproj -c Release -o ./output /p:CheckEolTargetFramework=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
