@@ -44,21 +44,38 @@ public sealed class InputManager
 {
     private readonly InputState _state = new();
     private Vector2 _lastPointer;
+    private bool _touchReady;
 
     public InputState Current => _state;
 
     public void Update()
     {
         _state.BeginFrame();
-        _state.Keyboard = Keyboard.GetState();
-        _state.Mouse = Mouse.GetState();
-        _state.GamePad = GamePad.GetState(PlayerIndex.One);
-        _state.Touches = TouchPanel.GetState();
 
-        // Pointer unification (mouse + touch)
-        if (_state.Touches.Count > 0)
+        try { _state.Keyboard = Keyboard.GetState(); }
+        catch { _state.Keyboard = default; }
+
+        try { _state.Mouse = Mouse.GetState(); }
+        catch { _state.Mouse = default; }
+
+        try { _state.GamePad = GamePad.GetState(PlayerIndex.One); }
+        catch { _state.GamePad = default; }
+
+        TouchCollection touches = default;
+        try
         {
-            var t = _state.Touches[0];
+            touches = TouchPanel.GetState();
+            _touchReady = true;
+        }
+        catch
+        {
+            _touchReady = false;
+        }
+        _state.Touches = touches;
+
+        if (_touchReady && touches.Count > 0)
+        {
+            var t = touches[0];
             _state.PointerPosition = t.Position.ToPoint();
             _state.IsPointerDown = t.State == TouchLocationState.Pressed || t.State == TouchLocationState.Moved;
             _state.IsPointerPressed = t.State == TouchLocationState.Pressed;
@@ -68,28 +85,33 @@ public sealed class InputManager
         {
             _state.PointerPosition = _state.Mouse.Position;
             _state.IsPointerDown = _state.Mouse.LeftButton == ButtonState.Pressed;
-            _state.IsPointerPressed = _state.Mouse.LeftButton == ButtonState.Pressed && _state.PreviousMouse.LeftButton == ButtonState.Released;
-            _state.IsPointerReleased = _state.Mouse.LeftButton == ButtonState.Released && _state.PreviousMouse.LeftButton == ButtonState.Pressed;
+            _state.IsPointerPressed = _state.Mouse.LeftButton == ButtonState.Pressed &&
+                                      _state.PreviousMouse.LeftButton == ButtonState.Released;
+            _state.IsPointerReleased = _state.Mouse.LeftButton == ButtonState.Released &&
+                                       _state.PreviousMouse.LeftButton == ButtonState.Pressed;
         }
 
         _state.IsPointerMoved = _state.PointerPosition != _lastPointer.ToPoint();
         _lastPointer = _state.PointerPosition.ToVector2();
 
-        // Movement axis (keyboard + gamepad)
         float x = 0, y = 0;
         if (_state.IsKeyDown(Keys.A) || _state.IsKeyDown(Keys.Left)) x -= 1;
         if (_state.IsKeyDown(Keys.D) || _state.IsKeyDown(Keys.Right)) x += 1;
         if (_state.IsKeyDown(Keys.W) || _state.IsKeyDown(Keys.Up)) y -= 1;
         if (_state.IsKeyDown(Keys.S) || _state.IsKeyDown(Keys.Down)) y += 1;
-        x += _state.GamePad.ThumbSticks.Left.X;
-        y -= _state.GamePad.ThumbSticks.Left.Y;
+        try
+        {
+            x += _state.GamePad.ThumbSticks.Left.X;
+            y -= _state.GamePad.ThumbSticks.Left.Y;
+        }
+        catch { /* ignore */ }
         _state.MoveAxis = new Vector2(MathHelper.Clamp(x, -1, 1), MathHelper.Clamp(y, -1, 1));
 
-        _state.JumpPressed = _state.IsKeyPressed(Keys.Space) || _state.GamePad.IsButtonDown(Buttons.A) && !_state.PreviousGamePad.IsButtonDown(Buttons.A);
+        _state.JumpPressed = _state.IsKeyPressed(Keys.Space);
         _state.PrimaryActionPressed = _state.IsKeyPressed(Keys.E) || _state.IsPointerPressed;
-        _state.InteractPressed = _state.IsKeyPressed(Keys.F) || _state.GamePad.IsButtonDown(Buttons.X) && !_state.PreviousGamePad.IsButtonDown(Buttons.X);
-        _state.MenuPressed = _state.IsKeyPressed(Keys.Escape) || _state.GamePad.IsButtonDown(Buttons.Start) && !_state.PreviousGamePad.IsButtonDown(Buttons.Start);
-        _state.CancelPressed = _state.IsKeyPressed(Keys.Escape) || _state.GamePad.IsButtonDown(Buttons.B) && !_state.PreviousGamePad.IsButtonDown(Buttons.B);
-        _state.ConfirmPressed = _state.IsKeyPressed(Keys.Enter) || _state.GamePad.IsButtonDown(Buttons.A) && !_state.PreviousGamePad.IsButtonDown(Buttons.A);
+        _state.InteractPressed = _state.IsKeyPressed(Keys.F);
+        _state.MenuPressed = _state.IsKeyPressed(Keys.Escape);
+        _state.CancelPressed = _state.IsKeyPressed(Keys.Escape);
+        _state.ConfirmPressed = _state.IsKeyPressed(Keys.Enter);
     }
 }

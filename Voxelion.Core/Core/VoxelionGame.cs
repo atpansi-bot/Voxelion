@@ -24,9 +24,7 @@ public sealed class VoxelionGame : Game
 
     private SceneBase? _currentScene;
     private readonly Dictionary<ApplicationState, Func<SceneBase>> _sceneFactories = new();
-
-    private float _bootTimer;
-    private bool _assetsReady;
+    private bool _started;
 
     public LocalizationManager Loc => _loc;
     public SessionService Session => _session;
@@ -45,11 +43,11 @@ public sealed class VoxelionGame : Game
         Window.Title = "VOXELION";
         Window.AllowUserResizing = true;
 
-        // Landscape default 16:9
-        _graphics.PreferredBackBufferWidth = 1280;
-        _graphics.PreferredBackBufferHeight = 720;
-        _graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
-        _graphics.ApplyChanges();
+        // Jangan hardcode resolusi di Android — biarkan surface activity
+        _graphics.SupportedOrientations =
+            DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
+        _graphics.IsFullScreen = false;
+        _graphics.SynchronizeWithVerticalRetrace = true;
 
         RegisterScenes();
     }
@@ -84,63 +82,110 @@ public sealed class VoxelionGame : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
-
-        // Attempt to load default font; fallback to null and use procedural text metrics
-        try
-        {
-            // MonoGame default content may not have font; we handle null gracefully
-            // _font = Content.Load<SpriteFont>("Fonts/Default");
-        }
-        catch { /* pure procedural */ }
-
-        _assetsReady = true;
+        _started = true;
         TransitionTo(ApplicationState.Boot);
     }
 
     private void OnStateChanged(ApplicationState prev, ApplicationState next)
     {
-        _currentScene?.OnExit();
-        if (_sceneFactories.TryGetValue(next, out var factory))
+        try
         {
-            _currentScene = factory();
-            _currentScene.OnEnter();
+            _currentScene?.OnExit();
+            if (_sceneFactories.TryGetValue(next, out var factory))
+            {
+                _currentScene = factory();
+                _currentScene.OnEnter();
+            }
+        }
+        catch
+        {
+            _currentScene = null;
         }
     }
 
     public void TransitionTo(ApplicationState state) => _stateMachine.TransitionTo(state);
-
     public void GoBack() => _stateMachine.GoBack();
 
     protected override void Update(GameTime gameTime)
     {
-        _input.Update();
+        try
+        {
+            _input.Update();
+        }
+        catch
+        {
+            // TouchPanel/GamePad bisa gagal di frame awal Android — abaikan
+        }
 
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
-            Keyboard.GetState().IsKeyDown(Keys.F4) && Keyboard.GetState().IsKeyDown(Keys.LeftAlt))
-            Exit();
-
-        _currentScene?.Update(gameTime, _input.Current);
+        try
+        {
+            _currentScene?.Update(gameTime, _input.Current);
+        }
+        catch
+        {
+            // scene error tidak boleh menghentikan loop
+        }
 
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(DesignTokens.Color.VoidBlack);
+        var clear = DesignTokens.Color.VoidBlack;
+        GraphicsDevice.Clear(clear);
 
-        _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+        if (!_started || _spriteBatch == null || _pixel == null)
+        {
+            base.Draw(gameTime);
+            return;
+        }
 
-        _currentScene?.Draw(_spriteBatch, gameTime);
+        var vp = GraphicsDevice.Viewport;
+        if (vp.Width < 2 || vp.Height < 2)
+        {
+            base.Draw(gameTime);
+            return;
+        }
+
+        _spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            DepthStencilState.None,
+            RasterizerState.CullNone);
+
+        try
+        {
+            if (_currentScene != null)
+            {
+                _currentScene.Draw(_spriteBatch, gameTime);
+            }
+            else
+            {
+                // Fallback visual supaya tidak pure black
+                float cx = vp.Width * 0.5f;
+                float cy = vp.Height * 0.5f;
+                DrawRect(_spriteBatch, cx - 40, cy - 40, 80, 80, DesignTokens.Color.AccentPrimary);
+                DrawRect(_spriteBatch, cx - 20, cy - 20, 40, 40, DesignTokens.Color.AccentSecondary);
+                DrawText(_spriteBatch, "VOXELION", new Vector2(cx - 48, cy + 50), DesignTokens.Color.TextPrimary, 1.2f);
+            }
+        }
+        catch
+        {
+            DrawRect(_spriteBatch, 0, 0, vp.Width, 8, DesignTokens.Color.AccentDanger);
+        }
 
         _spriteBatch.End();
-
         base.Draw(gameTime);
     }
 
     public void DrawRect(SpriteBatch sb, Rectangle r, Color c) => sb.Draw(_pixel, r, c);
 
-    public void DrawRect(SpriteBatch sb, float x, float y, float w, float h, Color c) =>
-        sb.Draw(_pixel, new Rectangle((int)x, (int)y, (int)w, (int)h), c);
+    public void DrawRect(SpriteBatch sb, float x, float y, float w, float h, Color c)
+    {
+        if (w < 1 || h < 1) return;
+        sb.Draw(_pixel, new Rectangle((int)x, (int)y, Math.Max(1, (int)w), Math.Max(1, (int)h)), c);
+    }
 
     public void DrawBorder(SpriteBatch sb, Rectangle r, Color c, int thickness = 1)
     {
@@ -152,27 +197,26 @@ public sealed class VoxelionGame : Game
 
     public void DrawText(SpriteBatch sb, string text, Vector2 pos, Color color, float scale = 1f)
     {
+        if (string.IsNullOrEmpty(text)) return;
         if (_font != null)
         {
             sb.DrawString(_font, text, pos, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
             return;
         }
-        // Procedural fallback: draw simple block text representation
         float charW = 8f * scale;
         float charH = 14f * scale;
         for (int i = 0; i < text.Length; i++)
         {
-            char ch = text[i];
-            if (ch == ' ') continue;
+            if (text[i] == ' ') continue;
             float px = pos.X + i * charW;
-            // Simple glyph as filled rect for visibility
-            DrawRect(sb, px, pos.Y, charW * 0.7f, charH * 0.8f, color * 0.9f);
+            DrawRect(sb, px, pos.Y, charW * 0.7f, charH * 0.8f, color * 0.95f);
         }
     }
 
     public Vector2 MeasureText(string text, float scale = 1f)
     {
         if (_font != null) return _font.MeasureString(text) * scale;
+        if (string.IsNullOrEmpty(text)) return Vector2.Zero;
         return new Vector2(text.Length * 8f * scale, 14f * scale);
     }
 }

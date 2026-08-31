@@ -13,7 +13,7 @@ namespace Voxelion.Android;
     Icon = "@mipmap/icon",
     Theme = "@style/MainTheme",
     AlwaysRetainTaskState = true,
-    LaunchMode = LaunchMode.SingleInstance,
+    LaunchMode = LaunchMode.SingleTask,
     ScreenOrientation = ScreenOrientation.SensorLandscape,
     ConfigurationChanges =
         ConfigChanges.Orientation |
@@ -25,16 +25,18 @@ namespace Voxelion.Android;
         ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AndroidGameActivity
 {
-    private VoxelionGame _game = null!;
+    private VoxelionGame? _game;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
 
-        // Force immersive landscape game surface — never inflate activity_main / Hello layout
         _game = new VoxelionGame();
-        var view = (View)_game.Services.GetService(typeof(View))!;
-        SetContentView(view);
+        var service = _game.Services.GetService(typeof(View));
+        if (service is View view)
+        {
+            SetContentView(view);
+        }
         _game.Run();
     }
 
@@ -75,6 +77,7 @@ public class MainActivity : AndroidGameActivity
     protected override void OnDestroy()
     {
         _game?.Dispose();
+        _game = null;
         base.OnDestroy();
     }
 }
