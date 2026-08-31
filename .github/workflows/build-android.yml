@@ -23,10 +23,15 @@ jobs:
           java-version: '17'
 
       - name: Install Android workload
-        run: dotnet workload install android --skip-manifest-update
+        run: |
+          dotnet --list-sdks
+          dotnet workload install android --skip-manifest-update
 
       - name: Restore
-        run: dotnet restore Voxelion.Android/Voxelion.Android.csproj
+        run: |
+          dotnet restore Voxelion.Android/Voxelion.Android.csproj \
+            -p:CheckEolTargetFramework=false \
+            -p:CheckEolWorkloads=false
 
       - name: Publish APK
         run: |
@@ -34,8 +39,10 @@ jobs:
             -c Release \
             -f net8.0-android34.0 \
             -o ./output \
-            /p:ApplicationId=com.voxelion.app \
-            /p:ApplicationTitle=VOXELION
+            -p:CheckEolTargetFramework=false \
+            -p:CheckEolWorkloads=false \
+            -p:ApplicationId=com.voxelion.app \
+            -p:ApplicationTitle=VOXELION
 
       - name: List output
         run: find output -type f | head -40
