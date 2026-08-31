@@ -15,18 +15,17 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
-    <UseInterpreter>false</UseInterpreter>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.Android" Version="3.8.2.1105" />
+    <PackageReference Include="MonoGame.Framework.Android" Version="3.8.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Voxelion.Core\Voxelion.Core.csproj" />
   </ItemGroup>
 
-  <!-- Explicitly exclude any leftover Hello Android layouts if present -->
   <ItemGroup>
     <AndroidResource Remove="**/activity_main.xml" />
     <AndroidResource Remove="**/MainPage.*" />
