@@ -1,0 +1,61 @@
+name: Build VOXELION Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Android workload
+        run: dotnet workload install android --skip-manifest-update
+
+      - name: Restore
+        run: dotnet restore Voxelion.Android/Voxelion.Android.csproj
+
+      - name: Build & Publish APK
+        run: |
+          dotnet publish Voxelion.Android/Voxelion.Android.csproj \
+            -c Release \
+            -f net8.0-android \
+            -o ./output \
+            /p:ApplicationId=com.voxelion.app \
+            /p:ApplicationTitle=VOXELION \
+            /p:CheckEolTargetFramework=false
+
+      - name: Verify APK is not Hello template
+        run: |
+          APK=$(find output -name "*.apk" | head -1)
+          echo "APK=$APK"
+          if [ -z "$APK" ]; then echo "No APK produced"; exit 1; fi
+          unzip -l "$APK" | tee apk-list.txt
+          if unzip -p "$APK" res/layout/activity_main.xml 2>/dev/null | strings | grep -qi "Hello"; then
+            echo "FAIL: Hello Android layout still present"
+            exit 1
+          fi
+          if ! grep -qi "Voxelion" apk-list.txt; then
+            echo "FAIL: Voxelion assemblies missing"
+            exit 1
+          fi
+          echo "OK: APK looks like VOXELION"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxelion-android-apk
+          path: output/**/*.apk
