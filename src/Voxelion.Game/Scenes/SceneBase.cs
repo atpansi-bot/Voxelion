@@ -11,7 +11,7 @@ namespace Voxelion.Game.Scenes
     {
         protected VoxelionGame Game;
         protected UINavigationManager Nav => Game.Navigation;
-        protected Localization.LocalizationManager Loc => Game.Localization;
+        protected LocalizationManager.LocalizationManager Loc => Game.Localization;
         protected SessionManager Session => Game.Session;
         public ApplicationState StateId { get; protected set; }
         public bool IsActive { get; set; }
