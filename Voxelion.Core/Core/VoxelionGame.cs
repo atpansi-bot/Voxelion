@@ -22,21 +22,21 @@ public sealed class VoxelionGame : Game
     private readonly LocalizationManager _loc = new();
     private readonly SessionService _session = new();
     private readonly PlayerProfile _profile = new();
+    private readonly NotificationBus _toasts = new();
 
     private SceneBase? _currentScene;
     private readonly Dictionary<ApplicationState, Func<SceneBase>> _sceneFactories = new();
     private bool _started;
-    private double _totalSeconds;
 
     public LocalizationManager Loc => _loc;
     public SessionService Session => _session;
     public PlayerProfile Profile => _profile;
     public ApplicationStateMachine StateMachine => _stateMachine;
+    public NotificationBus Toasts => _toasts;
     public Texture2D Pixel => _pixel;
     public PixelFont Font => _font;
     public SpriteBatch SpriteBatch => _spriteBatch;
     public GraphicsDeviceManager Graphics => _graphics;
-    public double TotalSeconds => _totalSeconds;
 
     public VoxelionGame()
     {
@@ -45,14 +45,12 @@ public sealed class VoxelionGame : Game
         IsMouseVisible = true;
         Window.Title = "VOXELION";
         Window.AllowUserResizing = true;
-
         _graphics.SupportedOrientations =
             DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
         _graphics.IsFullScreen = false;
         _graphics.SynchronizeWithVerticalRetrace = true;
         IsFixedTimeStep = true;
         TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 60.0);
-
         RegisterScenes();
     }
 
@@ -73,6 +71,10 @@ public sealed class VoxelionGame : Game
         _sceneFactories[ApplicationState.WorldConnecting] = () => new SceneConnect(this);
         _sceneFactories[ApplicationState.WorldLoading] = () => new SceneWorldLoading(this);
         _sceneFactories[ApplicationState.World] = () => new SceneWorld(this);
+        _sceneFactories[ApplicationState.Inventory] = () => new SceneInventory(this);
+        _sceneFactories[ApplicationState.Settings] = () => new SceneSettings(this);
+        _sceneFactories[ApplicationState.Social] = () => new SceneSocial(this);
+        _sceneFactories[ApplicationState.PauseMenu] = () => new ScenePause(this);
     }
 
     protected override void Initialize()
@@ -88,14 +90,10 @@ public sealed class VoxelionGame : Game
         _pixel.SetData(new[] { Color.White });
         _font = new PixelFont(_pixel);
         _started = true;
-
-        // State machine starts at None so this always fires OnStateChanged
         TransitionTo(ApplicationState.Boot);
-
-        // Safety net if scene still null
-        if (_currentScene == null && _sceneFactories.TryGetValue(ApplicationState.Boot, out var bootFactory))
+        if (_currentScene == null && _sceneFactories.TryGetValue(ApplicationState.Boot, out var f))
         {
-            _currentScene = bootFactory();
+            _currentScene = f();
             _currentScene.OnEnter();
         }
     }
@@ -110,15 +108,9 @@ public sealed class VoxelionGame : Game
                 _currentScene = factory();
                 _currentScene.OnEnter();
             }
-            else
-            {
-                _currentScene = null;
-            }
+            else _currentScene = null;
         }
-        catch
-        {
-            _currentScene = null;
-        }
+        catch { _currentScene = null; }
     }
 
     public void TransitionTo(ApplicationState state) => _stateMachine.TransitionTo(state);
@@ -126,71 +118,45 @@ public sealed class VoxelionGame : Game
 
     protected override void Update(GameTime gameTime)
     {
-        _totalSeconds = gameTime.TotalGameTime.TotalSeconds;
-
-        try { _input.Update(); }
-        catch { /* early Android frames */ }
-
-        try { _currentScene?.Update(gameTime, _input.Current); }
-        catch { /* keep loop alive */ }
-
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        try { _input.Update(); } catch { }
+        try { _currentScene?.Update(gameTime, _input.Current); } catch { }
+        _toasts.Update(dt);
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(DesignTokens.Color.VoidBlack);
-
-        if (!_started || _spriteBatch == null || _pixel == null)
-        {
-            base.Draw(gameTime);
-            return;
-        }
-
+        if (!_started || _spriteBatch == null || _pixel == null) { base.Draw(gameTime); return; }
         var vp = GraphicsDevice.Viewport;
-        if (vp.Width < 2 || vp.Height < 2)
-        {
-            base.Draw(gameTime);
-            return;
-        }
+        if (vp.Width < 2 || vp.Height < 2) { base.Draw(gameTime); return; }
 
-        _spriteBatch.Begin(
-            SpriteSortMode.Deferred,
-            BlendState.AlphaBlend,
-            SamplerState.PointClamp,
-            DepthStencilState.None,
-            RasterizerState.CullNone);
-
+        _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp,
+            DepthStencilState.None, RasterizerState.CullNone);
         try
         {
             if (_currentScene != null)
                 _currentScene.Draw(_spriteBatch, gameTime);
             else
             {
-                float cx = vp.Width * 0.5f;
-                float cy = vp.Height * 0.5f;
+                float cx = vp.Width * 0.5f, cy = vp.Height * 0.5f;
                 DrawRect(_spriteBatch, cx - 40, cy - 40, 80, 80, DesignTokens.Color.AccentPrimary);
-                DrawRect(_spriteBatch, cx - 20, cy - 20, 40, 40, DesignTokens.Color.AccentSecondary);
                 DrawText(_spriteBatch, "VOXELION", new Vector2(cx - 56, cy + 52), DesignTokens.Color.TextPrimary, 2f);
             }
+            _toasts.Draw(this, _spriteBatch, vp);
         }
-        catch
-        {
-            DrawRect(_spriteBatch, 0, 0, vp.Width, 12, DesignTokens.Color.AccentDanger);
-        }
-
+        catch { DrawRect(_spriteBatch, 0, 0, vp.Width, 12, DesignTokens.Color.AccentDanger); }
         _spriteBatch.End();
         base.Draw(gameTime);
     }
 
     public void DrawRect(SpriteBatch sb, Rectangle r, Color c) => sb.Draw(_pixel, r, c);
-
     public void DrawRect(SpriteBatch sb, float x, float y, float w, float h, Color c)
     {
         if (w < 1 || h < 1) return;
         sb.Draw(_pixel, new Rectangle((int)x, (int)y, Math.Max(1, (int)w), Math.Max(1, (int)h)), c);
     }
-
     public void DrawBorder(SpriteBatch sb, Rectangle r, Color c, int thickness = 2)
     {
         DrawRect(sb, r.X, r.Y, r.Width, thickness, c);
@@ -198,34 +164,14 @@ public sealed class VoxelionGame : Game
         DrawRect(sb, r.X, r.Y, thickness, r.Height, c);
         DrawRect(sb, r.Right - thickness, r.Y, thickness, r.Height, c);
     }
-
     public void DrawText(SpriteBatch sb, string text, Vector2 pos, Color color, float scale = 1f)
     {
         if (string.IsNullOrEmpty(text)) return;
         _font.Draw(sb, text, pos, color, scale);
     }
+    public Vector2 MeasureText(string text, float scale = 1f) =>
+        string.IsNullOrEmpty(text) ? Vector2.Zero : _font.Measure(text, scale);
 
-    public Vector2 MeasureText(string text, float scale = 1f)
-    {
-        if (string.IsNullOrEmpty(text)) return Vector2.Zero;
-        return _font.Measure(text, scale);
-    }
-
-    /// <summary>Draw a tappable panel button. Returns true if pressed this frame.</summary>
-    public bool DrawButton(SpriteBatch sb, InputState input, Rectangle bounds, string label, Color fill, Color border, float textScale = 2f)
-    {
-        bool hover = bounds.Contains(input.PointerPosition);
-        bool pressed = hover && input.IsPointerDown;
-        Color bg = pressed ? fill * 0.75f : hover ? fill * 0.9f : fill;
-        DrawRect(sb, bounds, bg);
-        DrawBorder(sb, bounds, border, 2);
-
-        var size = MeasureText(label, textScale);
-        var tp = new Vector2(
-            bounds.X + (bounds.Width - size.X) * 0.5f,
-            bounds.Y + (bounds.Height - size.Y) * 0.5f);
-        DrawText(sb, label, tp, DesignTokens.Color.TextPrimary, textScale);
-
-        return hover && input.IsPointerReleased;
-    }
+    public void DrawIcon(SpriteBatch sb, string id, Rectangle bounds, Color color) =>
+        Icons.Draw(sb, _pixel, id, bounds, color);
 }

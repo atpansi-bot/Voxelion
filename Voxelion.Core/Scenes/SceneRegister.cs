@@ -2,51 +2,58 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Voxelion.Core.Core;
 using Voxelion.Core.Input;
+using Voxelion.Core.UI;
 using Voxelion.Core.UI.Theme;
 
 namespace Voxelion.Core.Scenes;
 
+/// <summary>Short registration: Account → Identity → Avatar → Ready.</summary>
 public sealed class SceneRegister : SceneBase
 {
-    private int _step;
-    private int _hovered = -1;
+    private int _step; // 0..3
+    private Rectangle _btnNext, _btnBack;
+    private readonly string[] _steps = { "ACCOUNT", "IDENTITY", "AVATAR", "READY" };
 
     public SceneRegister(VoxelionGame game) : base(game) { }
+
+    public override void OnEnter()
+    {
+        base.OnEnter();
+        _step = 0;
+        Layout();
+    }
+
+    private void Layout()
+    {
+        var vp = Game.GraphicsDevice.Viewport;
+        float cx = vp.Width * 0.5f;
+        float bw = Math.Min(160f, vp.Width * 0.28f);
+        float bh = 48f;
+        float y = vp.Height * 0.82f;
+        _btnBack = new Rectangle((int)(cx - bw - 12), (int)y, (int)bw, (int)bh);
+        _btnNext = new Rectangle((int)(cx + 12), (int)y, (int)bw, (int)bh);
+    }
 
     public override void Update(GameTime gameTime, InputState input)
     {
         base.Update(gameTime, input);
-        var vp = Game.GraphicsDevice.Viewport;
-        float w = vp.Width, h = vp.Height;
-
-        // Next / Back buttons
-        var nextR = new Rectangle((int)(w * 0.55f), (int)(h * 0.82f), 160, 44);
-        var backR = new Rectangle((int)(w * 0.35f), (int)(h * 0.82f), 160, 44);
-        _hovered = -1;
-        if (nextR.Contains(input.PointerPosition)) _hovered = 0;
-        if (backR.Contains(input.PointerPosition)) _hovered = 1;
-
-        if (input.IsPointerPressed)
+        Layout();
+        if (!input.IsPointerReleased) return;
+        if (_btnBack.Contains(input.PointerPosition))
         {
-            if (_hovered == 0)
-            {
-                _step++;
-                if (_step >= 4)
-                {
-                    Game.Session.CreateAccountSession(Game.Profile, "player@voxelion.local");
-                    Game.TransitionTo(ApplicationState.CharacterCreation);
-                }
-            }
-            else if (_hovered == 1)
-            {
-                if (_step > 0) _step--;
-                else Game.GoBack();
-            }
+            if (_step == 0) Game.TransitionTo(ApplicationState.Authentication);
+            else _step--;
+            return;
         }
-        if (input.CancelPressed)
+        if (_btnNext.Contains(input.PointerPosition))
         {
-            if (_step > 0) _step--;
-            else Game.GoBack();
+            if (_step < 3) _step++;
+            else
+            {
+                Game.Session.CreateAccountSession(Game.Profile, "player@voxelion.local");
+                Game.Toasts.Push("ACCOUNT READY", ToastKind.Success);
+                Game.TransitionTo(ApplicationState.CharacterCreation);
+            }
         }
     }
 
@@ -54,49 +61,39 @@ public sealed class SceneRegister : SceneBase
     {
         var vp = Game.GraphicsDevice.Viewport;
         float w = vp.Width, h = vp.Height, cx = w * 0.5f;
-
         Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.DeepNight);
+        UiKit.CenterLabel(Game, sb, "CREATE ACCOUNT", h * 0.12f, DesignTokens.Color.TextPrimary, 2.4f, w);
 
-        // Progress steps
-        string[] steps = { Game.Loc["register.step1"], Game.Loc["register.step2"], Game.Loc["register.step3"], Game.Loc["register.step4"] };
-        float stepW = 100f, startX = cx - (steps.Length * stepW) * 0.5f;
-        for (int i = 0; i < steps.Length; i++)
+        // Step indicator
+        float total = _steps.Length * 70f;
+        float sx = cx - total * 0.5f;
+        for (int i = 0; i < _steps.Length; i++)
         {
-            Color c = i <= _step ? DesignTokens.Color.AccentPrimary : DesignTokens.Color.TextMuted;
-            Game.DrawRect(sb, startX + i * stepW + 20, 40, 12, 12, c);
-            Game.DrawText(sb, steps[i], new Vector2(startX + i * stepW, 60), c, 0.7f);
-            if (i < steps.Length - 1)
-                Game.DrawRect(sb, startX + i * stepW + 50, 45, 40, 2, DesignTokens.Color.BorderSubtle);
+            Color c = i <= _step ? DesignTokens.Color.AccentPrimary : DesignTokens.Color.ShadowIndigo;
+            Game.DrawRect(sb, sx + i * 70, h * 0.22f, 50, 8, c);
+            Game.DrawText(sb, (i + 1).ToString(), new Vector2(sx + i * 70 + 18, h * 0.26f), DesignTokens.Color.TextMuted, 1.2f);
         }
+        UiKit.CenterLabel(Game, sb, _steps[_step], h * 0.34f, DesignTokens.Color.AccentSecondary, 2f, w);
 
-        // Content panel
-        var panel = new Rectangle((int)(w * 0.25f), (int)(h * 0.25f), (int)(w * 0.5f), (int)(h * 0.45f));
-        Game.DrawRect(sb, panel, DesignTokens.Color.PanelBase);
-        Game.DrawBorder(sb, panel, DesignTokens.Color.BorderSubtle, 1);
-
-        string msg = _step switch
+        string body = _step switch
         {
-            0 => "Enter email & password",
-            1 => "Choose display identity",
-            2 => "Select starting avatar style",
-            _ => "Account ready"
+            0 => "EMAIL AND PASSWORD ARE STORED LOCALLY IN THIS PROTOTYPE",
+            1 => "CHOOSE HOW YOU APPEAR TO OTHERS",
+            2 => "AVATAR WILL BE SET IN CHARACTER CREATION",
+            _ => "YOU CAN ENTER VOXELION AFTER THIS STEP"
         };
-        var ms = Game.MeasureText(msg, 1.1f);
-        Game.DrawText(sb, msg, new Vector2(cx - ms.X * 0.5f, h * 0.4f), DesignTokens.Color.TextPrimary, 1.1f);
+        UiKit.CenterLabel(Game, sb, body, h * 0.48f, DesignTokens.Color.TextSecondary, 1.3f, w);
 
-        // Buttons
-        var nextR = new Rectangle((int)(w * 0.55f), (int)(h * 0.82f), 160, 44);
-        var backR = new Rectangle((int)(w * 0.35f), (int)(h * 0.82f), 160, 44);
-        DrawBtn(sb, nextR, Game.Loc["common.next"], _hovered == 0);
-        DrawBtn(sb, backR, Game.Loc["common.back"], _hovered == 1);
+        DrawBtn(sb, _btnBack, "BACK", DesignTokens.Color.PanelBase);
+        DrawBtn(sb, _btnNext, _step == 3 ? "FINISH" : "NEXT", DesignTokens.Color.AccentPrimary);
     }
 
-    private void DrawBtn(SpriteBatch sb, Rectangle r, string label, bool hover)
+    private void DrawBtn(SpriteBatch sb, Rectangle r, string label, Color fill)
     {
-        Game.DrawRect(sb, r, hover ? DesignTokens.Color.PanelElevated : DesignTokens.Color.PanelBase);
-        Game.DrawBorder(sb, r, hover ? DesignTokens.Color.BorderFocus : DesignTokens.Color.BorderSubtle, 1);
-        var ls = Game.MeasureText(label, 0.95f);
-        Game.DrawText(sb, label, new Vector2(r.X + (r.Width - ls.X) * 0.5f, r.Y + (r.Height - ls.Y) * 0.5f),
-            DesignTokens.Color.TextPrimary, 0.95f);
+        Game.DrawRect(sb, r, fill);
+        Game.DrawBorder(sb, r, DesignTokens.Color.BorderFocus, 2);
+        var size = Game.MeasureText(label, 1.7f);
+        Game.DrawText(sb, label, new Vector2(r.X + (r.Width - size.X) * 0.5f, r.Y + (r.Height - size.Y) * 0.5f),
+            DesignTokens.Color.TextPrimary, 1.7f);
     }
 }

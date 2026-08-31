@@ -2,7 +2,6 @@ namespace Voxelion.Core.Core;
 
 public enum ApplicationState
 {
-    /// <summary>Sentinel before first real screen. TransitionTo(Boot) must fire from here.</summary>
     None = -1,
     Boot = 0,
     Splash,
@@ -20,7 +19,10 @@ public enum ApplicationState
     WorldConnecting,
     WorldLoading,
     World,
-    PauseMenu
+    PauseMenu,
+    Inventory,
+    Settings,
+    Social
 }
 
 public enum OverlayState
@@ -42,7 +44,6 @@ public enum OverlayState
 
 public sealed class ApplicationStateMachine
 {
-    // Start at None so TransitionTo(Boot) is never skipped
     public ApplicationState Current { get; private set; } = ApplicationState.None;
     public ApplicationState Previous { get; private set; } = ApplicationState.None;
     public OverlayState Overlay { get; private set; } = OverlayState.None;

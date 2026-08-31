@@ -6,6 +6,7 @@ using Voxelion.Core.UI.Theme;
 
 namespace Voxelion.Core.Scenes;
 
+/// <summary>Cinematic dissolve into hub — UI elements fade, light expands.</summary>
 public sealed class SceneTransition : SceneBase
 {
     public SceneTransition(VoxelionGame game) : base(game) { }
@@ -13,36 +14,29 @@ public sealed class SceneTransition : SceneBase
     public override void Update(GameTime gameTime, InputState input)
     {
         base.Update(gameTime, input);
-        if (EnterTime >= 1.8f)
+        if (EnterTime >= 1.4f)
             Game.TransitionTo(ApplicationState.Hub);
     }
 
     public override void Draw(SpriteBatch sb, GameTime gameTime)
     {
         var vp = Game.GraphicsDevice.Viewport;
-        float w = vp.Width, h = vp.Height, t = SceneTime;
-        float progress = MathHelper.Clamp(EnterTime / 1.8f, 0, 1);
+        float w = vp.Width, h = vp.Height, cx = w * 0.5f, cy = h * 0.5f;
+        float t = MathHelper.Clamp(EnterTime / 1.4f, 0, 1);
+        float ease = EaseInOut(t);
 
         Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.VoidBlack);
 
-        // Expanding light
-        float radius = progress * Math.Max(w, h) * 1.2f;
-        float cx = w * 0.5f, cy = h * 0.5f;
-        for (int i = 8; i >= 0; i--)
+        float radius = 40 + ease * Math.Max(w, h);
+        // Expanding light as filled rects approximating bloom
+        for (int i = 4; i >= 0; i--)
         {
-            float r = radius * (1f - i * 0.08f);
-            float a = (0.15f - i * 0.015f) * (1 - progress * 0.5f);
-            Game.DrawRect(sb, cx - r, cy - r, r * 2, r * 2, DesignTokens.Color.AccentPrimary * a);
+            float s = radius * (0.4f + i * 0.15f);
+            float a = (1f - i * 0.18f) * (0.3f + 0.4f * ease);
+            Game.DrawRect(sb, cx - s * 0.5f, cy - s * 0.5f, s, s, DesignTokens.Color.AccentPrimary * a);
         }
-
-        // Dissolving particles
-        for (int i = 0; i < 40; i++)
-        {
-            float angle = i * 0.4f + t;
-            float dist = progress * 300 + i * 8;
-            float px = cx + MathF.Cos(angle) * dist;
-            float py = cy + MathF.Sin(angle) * dist * 0.6f;
-            Game.DrawRect(sb, px, py, 3, 3, DesignTokens.Color.AccentSecondary * (1 - progress));
-        }
+        float emblem = 48 * (1f - ease * 0.5f);
+        Game.DrawRect(sb, cx - emblem * 0.5f, cy - emblem * 0.5f, emblem, emblem,
+            DesignTokens.Color.AccentSecondary * (1f - ease));
     }
 }

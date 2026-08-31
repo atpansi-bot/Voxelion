@@ -9,6 +9,7 @@ public sealed class PlayerProfile
     public int Level { get; set; } = 1;
     public bool IsGuest { get; set; }
     public bool HasCharacter { get; set; }
+    public bool TutorialCompleted { get; set; }
     public CharacterAppearance Appearance { get; set; } = new();
     public string? LastWorldId { get; set; }
     public string? LastWorldName { get; set; }

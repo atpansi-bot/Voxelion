@@ -114,21 +114,23 @@ public sealed class SceneWorld : SceneBase
         {
             if (input.IsPointerReleased)
             {
+                if (_qmInv.Contains(input.PointerPosition))
+                { Game.TransitionTo(ApplicationState.Inventory); return; }
                 if (_qmWorlds.Contains(input.PointerPosition))
-                {
-                    _showQuickMenu = false;
-                    Game.TransitionTo(ApplicationState.WorldDiscovery);
-                    return;
-                }
+                { Game.TransitionTo(ApplicationState.WorldDiscovery); return; }
+                if (_qmSocial.Contains(input.PointerPosition))
+                { Game.TransitionTo(ApplicationState.Social); return; }
+                if (_qmSettings.Contains(input.PointerPosition))
+                { Game.TransitionTo(ApplicationState.Settings); return; }
                 if (_qmClose.Contains(input.PointerPosition) || _btnMenu.Contains(input.PointerPosition))
                     _showQuickMenu = false;
             }
             return;
         }
 
-        if (input.IsPointerReleased && _btnMenu.Contains(input.PointerPosition) || input.MenuPressed)
+        if ((input.IsPointerReleased && _btnMenu.Contains(input.PointerPosition)) || input.MenuPressed)
         {
-            _showQuickMenu = true;
+            Game.TransitionTo(ApplicationState.PauseMenu);
             return;
         }
 
