@@ -19,24 +19,24 @@ namespace Voxelion.Game
     /// </summary>
     public class VoxelionGame : Microsoft.Xna.Framework.Game
     {
-        private GraphicsDeviceManager _graphics;
-        private SpriteBatch _spriteBatch;
-        private InputManager _input;
-        private LocalizationManager _localization;
-        private UINavigationManager _nav;
-        private SceneManager _scenes;
-        private AudioUIManager _audioUI;
-        private SessionManager _session;
+        private readonly GraphicsDeviceManager _graphics;
+        private SpriteBatch? _spriteBatch;
+        private InputManager? _input;
+        private LocalizationManager? _localization;
+        private UINavigationManager? _nav;
+        private SceneManager? _scenes;
+        private AudioUIManager? _audioUI;
+        private SessionManager? _session;
         private float _bootTimer;
         private bool _contentLoaded;
 
-        public static VoxelionGame Instance { get; private set; }
+        public static VoxelionGame? Instance { get; private set; }
         public GraphicsDeviceManager Graphics => _graphics;
-        public SpriteBatch SpriteBatch => _spriteBatch;
-        public InputManager Input => _input;
-        public LocalizationManager Localization => _localization;
-        public UINavigationManager Navigation => _nav;
-        public SessionManager Session => _session;
+        public SpriteBatch SpriteBatch => _spriteBatch!;
+        public InputManager Input => _input!;
+        public LocalizationManager Localization => _localization!;
+        public UINavigationManager Navigation => _nav!;
+        public SessionManager Session => _session!;
 
         public VoxelionGame()
         {
@@ -69,7 +69,7 @@ namespace Voxelion.Game
             base.Initialize();
         }
 
-        private void OnClientSizeChanged(object sender, EventArgs e)
+        private void OnClientSizeChanged(object? sender, EventArgs e)
         {
             // Responsive: notify all scenes of new viewport
             _scenes?.OnViewportChanged(GraphicsDevice.Viewport.Bounds);

@@ -11,7 +11,7 @@ namespace Voxelion.Game.Scenes
     {
         private readonly VoxelionGame _game;
         private readonly Dictionary<ApplicationState, SceneBase> _scenes = new();
-        private SceneBase _active;
+        private SceneBase? _active;
 
         public SceneManager(VoxelionGame game)
         {

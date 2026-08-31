@@ -20,7 +20,7 @@ namespace Voxelion.Core.State
     public class SessionManager
     {
         private const string SessionFile = "voxelion_session.json";
-        public PlayerProfile Current { get; private set; }
+        public PlayerProfile? Current { get; private set; }
         public SessionState State { get; private set; } = SessionState.Unknown;
         public bool IsOnline { get; set; } = true;
 
@@ -70,7 +70,7 @@ namespace Voxelion.Core.State
         public void SetIdentity(string name, string avatarId)
         {
             if (Current == null) CreateGuest();
-            Current.DisplayName = name;
+            Current!.DisplayName = name;
             Current.AvatarId = avatarId;
             SaveSession();
         }

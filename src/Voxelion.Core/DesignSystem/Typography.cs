@@ -59,13 +59,13 @@ namespace Voxelion.Core.DesignSystem
             };
         }
 
-        // Runtime font references (populated by FontManager)
-        public static SpriteFont FontRegular { get; set; }
-        public static SpriteFont FontBold { get; set; }
-        public static SpriteFont FontLight { get; set; }
-        public static SpriteFont FontDisplay { get; set; }
+        // Runtime font references (populated after Content.Load)
+        public static SpriteFont? FontRegular { get; set; }
+        public static SpriteFont? FontBold { get; set; }
+        public static SpriteFont? FontLight { get; set; }
+        public static SpriteFont? FontDisplay { get; set; }
 
-        public static SpriteFont Resolve(Style style)
+        public static SpriteFont? Resolve(Style style)
         {
             return style switch
             {

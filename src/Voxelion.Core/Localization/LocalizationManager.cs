@@ -17,7 +17,7 @@ namespace Voxelion.Core.Localization
         private string _current = "en";
 
         public string CurrentLanguage => _current;
-        public event Action OnLanguageChanged;
+        public event Action? OnLanguageChanged;
 
         public void Initialize(ContentManager content)
         {

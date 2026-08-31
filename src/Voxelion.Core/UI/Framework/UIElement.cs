@@ -15,7 +15,7 @@ namespace Voxelion.Core.UI.Framework
     public abstract class UIElement
     {
         public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
-        public UIElement Parent { get; set; }
+        public UIElement? Parent { get; set; }
         public List<UIElement> Children { get; } = new List<UIElement>();
 
         public Rectangle Bounds { get; set; }
@@ -33,11 +33,11 @@ namespace Voxelion.Core.UI.Framework
         public bool IsPressed { get; set; }
         public int ZIndex { get; set; }
 
-        public event Action OnClick;
-        public event Action OnFocus;
-        public event Action OnBlur;
-        public event Action OnHoverEnter;
-        public event Action OnHoverExit;
+        public event Action? OnClick;
+        public event Action? OnFocus;
+        public event Action? OnBlur;
+        public event Action? OnHoverEnter;
+        public event Action? OnHoverExit;
 
         protected float AnimProgress;
         protected float TargetOpacity = 1f;
