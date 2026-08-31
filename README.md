@@ -1,15 +1,33 @@
-# VOXELION — UI/UX Complete (MonoGame + C#)
+# VOXELION
 
-Original 2D multiplayer sandbox interface. Landscape-first for Android + PC.
+Original 2D multiplayer sandbox — Landscape UI/UX (MonoGame + C#).
 
-## What was fixed / expanded
+## CRITICAL — Why you saw "Hello, Android!"
 
-- Completed missing scenes: **Hub, Discover, Connect, WorldLoading, World**
-- Wired full journey: Boot → Splash → Loading → Title → Auth → Character → Identity → Welcome → Transition → Hub → Discover → Connect → WorldLoading → World
-- Desktop entry uses `VoxelionGame` (not empty Game1 template)
-- Android project: package **`com.voxelion.app`** (not `com.companyname.*`)
-- Localization keys for connection errors + tutorials
-- Design tokens, input abstraction, session service, state machine
+The APK you installed was the **default .NET Android template**, not VOXELION.
+Package was `com.companyname.Voxelion.Android` with layout `activity_main.xml` + TextView "Hello, Android!".
+
+**This source removes that path entirely.**
+
+| Item | Value |
+|------|--------|
+| Package ID | `com.voxelion.app` |
+| App name | `VOXELION` |
+| Entry | `MainActivity` → `VoxelionGame` (MonoGame) |
+| Orientation | Landscape only |
+| UI | Full journey Boot→…→World HUD (no XML Hello layout) |
+
+## Delete old template on your machine / GitHub
+
+```bash
+# In your repo root
+rm -rf any old Android project that still has:
+#   - MainPage.xaml / MainPage.cs
+#   - activity_main.xml with Hello text
+#   - ApplicationId com.companyname.*
+
+# Replace with THIS Voxelion/ folder completely
+```
 
 ## Build Desktop
 
@@ -20,31 +38,20 @@ dotnet run --project Voxelion.Desktop
 
 ## Build Android APK
 
-Requires: .NET 8, Android SDK 34, JDK 17, MonoGame Android workload.
-
 ```bash
 dotnet workload install android
 dotnet publish Voxelion.Android -c Release -f net8.0-android -o ./output
 ```
 
-Signed APK path depends on your keystore. Use:
+APK output: `output/*.apk`  
+Install: `adb install -r output/*.apk`
 
-```bash
-dotnet publish Voxelion.Android -c Release -p:AndroidKeyStore=true \
-  -p:AndroidSigningKeyStore=your.keystore \
-  -p:AndroidSigningKeyAlias=alias \
-  -p:AndroidSigningKeyPass=pass \
-  -p:AndroidSigningStorePass=pass
-```
+Or push to GitHub — workflow `.github/workflows/build-android.yml` builds and **fails** if Hello template is detected.
 
-## APK note
+## Journey implemented
 
-The uploaded `com.companyname.Voxelion.Android-Signed.apk` was a **blank template shell** (default companyname package, almost no game assemblies). This source tree replaces that with the real VOXELION UI pipeline and package id `com.voxelion.app`.
+Boot → Splash → Loading → Title → Auth/Guest → Character → Identity → Welcome → Transition → Hub → Discover → Connect → WorldLoading → World (HUD + movement + interact + tutorial)
 
 ## Termux
 
-Edit + git from Termux. Build APK on GitHub Actions / PC with Android SDK.
-
-## Free backend (later)
-
-MongoDB Atlas M0 free tier for accounts / worlds when you leave pure UI phase.
+Edit + git only. Build APK on GitHub Actions (free) or PC with Android SDK.
