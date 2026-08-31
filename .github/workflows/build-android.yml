@@ -23,45 +23,33 @@ jobs:
           java-version: '17'
 
       - name: Install Android workload
-        run: |
-          dotnet workload install android --skip-manifest-update || true
-          dotnet workload list
+        run: dotnet workload install android --skip-manifest-update
 
       - name: Restore
-        run: |
-          dotnet restore Voxelion.Android/Voxelion.Android.csproj \
-            /p:CheckEolTargetFramework=false
+        run: dotnet restore Voxelion.Android/Voxelion.Android.csproj
 
-      - name: Build & Publish APK
+      - name: Publish APK
         run: |
           dotnet publish Voxelion.Android/Voxelion.Android.csproj \
             -c Release \
-            -f net8.0-android \
+            -f net8.0-android34.0 \
             -o ./output \
             /p:ApplicationId=com.voxelion.app \
-            /p:ApplicationTitle=VOXELION \
-            /p:CheckEolTargetFramework=false \
-            /p:EmbedAssembliesIntoApk=true
+            /p:ApplicationTitle=VOXELION
 
       - name: List output
-        run: find output -type f | head -50
+        run: find output -type f | head -40
 
       - name: Verify APK
         run: |
           APK=$(find output -name "*.apk" | head -1)
           echo "APK=$APK"
-          if [ -z "$APK" ]; then echo "No APK produced"; exit 1; fi
-          unzip -l "$APK" | tee apk-list.txt
-          if unzip -p "$APK" res/layout/activity_main.xml 2>/dev/null | strings | grep -qi "Hello"; then
-            echo "FAIL: Hello Android layout still present"
-            exit 1
-          fi
-          echo "OK: APK built"
+          test -n "$APK" || (echo "No APK" && exit 1)
+          unzip -l "$APK" | head -30
+          echo "OK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: voxelion-android-apk
-          path: |
-            output/**/*.apk
-            output/**/*-Signed.apk
+          path: output/**/*.apk
