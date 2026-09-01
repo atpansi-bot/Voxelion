@@ -106,7 +106,7 @@ public sealed class InputManager
         catch { _touchReady = false; }
         _state.Touches = touches;
 
-        bool usedTouch = false;
+        
         if (_touchReady && touches.Count > 0)
         {
             var t = touches[0];
@@ -114,7 +114,7 @@ public sealed class InputManager
             _state.IsPointerDown = t.State == TouchLocationState.Pressed || t.State == TouchLocationState.Moved;
             _state.IsPointerPressed = t.State == TouchLocationState.Pressed;
             _state.IsPointerReleased = t.State == TouchLocationState.Released;
-            usedTouch = true;
+            
             _state.LastDevice = InputDeviceKind.Touch;
         }
         else

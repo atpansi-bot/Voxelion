@@ -8,12 +8,15 @@ using Voxelion.Core.UI.Theme;
 
 namespace Voxelion.Core.Scenes;
 
-/// <summary>Title — demonstrates FocusNav + InputAdaptive for all devices.</summary>
+/// <summary>Title — FocusNav + InputAdaptive for all devices.</summary>
 public sealed class SceneTitle : SceneBase
 {
     private Rectangle _btnPlay, _btnAccount, _btnSettings, _btnLang;
     private readonly FocusNav _focus = new();
-    private readonly Language[] _langs = { Language.English, Language.BahasaIndonesia, Language.Japanese, Language.Chinese, Language.Korean };
+    private readonly Language[] _langs =
+    {
+        Language.English, Language.BahasaIndonesia, Language.Japanese, Language.Chinese, Language.Korean
+    };
     private readonly string[] _langCodes = { "EN", "ID", "JA", "ZH", "KO" };
 
     public SceneTitle(VoxelionGame game) : base(game) { }
@@ -21,42 +24,39 @@ public sealed class SceneTitle : SceneBase
     public override void OnEnter()
     {
         base.OnEnter();
-        Layout();
+        Relayout();
     }
 
-    private void Layout()
+    private void Relayout()
     {
         var vp = Game.GraphicsDevice.Viewport;
-        Layout.Update(vp);
+        UI.Layout.Update(vp);
 
-        float bw = Math.Min(280f, Layout.Safe.Width * 0.55f);
-        float bh = InputAdaptive.TargetHeight(new InputState { LastDevice = InputDeviceKind.Touch });
-        // Prefer live device from last frame via a neutral large target; refined in Update
-        bh = Math.Max(DesignTokens.Layout.MinTouchTarget, DesignTokens.Component.ButtonHeight);
+        float bw = Math.Min(280f, UI.Layout.Safe.Width * 0.55f);
+        float bh = Math.Max(DesignTokens.Layout.MinTouchTarget, DesignTokens.Component.ButtonHeight);
 
-        var play = Layout.Box(LayoutBox.Default
+        var play = UI.Layout.Box(LayoutBox.Default
             .WithAnchor(Anchor.Center)
             .WithSize(bw, bh)
             .WithRelative(0.5f, 0.58f));
         _btnPlay = play;
         _btnAccount = new Rectangle(play.X, play.Y + play.Height + (int)DesignTokens.Spacing.M, play.Width, play.Height);
         _btnSettings = new Rectangle(play.X, _btnAccount.Y + play.Height + (int)DesignTokens.Spacing.M, play.Width, play.Height);
-        _btnLang = Layout.Box(LayoutBox.Default
+        _btnLang = UI.Layout.Box(LayoutBox.Default
             .WithAnchor(Anchor.TopRight)
             .WithSize(72, 40)
             .WithMargin(new Thickness(DesignTokens.Spacing.M)));
-        _btnLang = Layout.ClampToSafe(_btnLang);
+        _btnLang = UI.Layout.ClampToSafe(_btnLang);
     }
 
     public override void Update(GameTime gameTime, InputState input)
     {
         base.Update(gameTime, input);
-        Layout();
+        Relayout();
 
         float bh = InputAdaptive.TargetHeight(input);
         if (Math.Abs(_btnPlay.Height - bh) > 1)
         {
-            int dy = (int)(bh - _btnPlay.Height);
             _btnPlay = new Rectangle(_btnPlay.X, _btnPlay.Y, _btnPlay.Width, (int)bh);
             _btnAccount = new Rectangle(_btnAccount.X, _btnPlay.Bottom + (int)DesignTokens.Spacing.M, _btnAccount.Width, (int)bh);
             _btnSettings = new Rectangle(_btnSettings.X, _btnAccount.Bottom + (int)DesignTokens.Spacing.M, _btnSettings.Width, (int)bh);
@@ -71,7 +71,7 @@ public sealed class SceneTitle : SceneBase
         _focus.Update(input);
 
         if (input.CancelPressed)
-            return; // title root — nothing to pop
+            return;
 
         if (_focus.Activated(input, "lang", _btnLang))
         {
@@ -108,8 +108,7 @@ public sealed class SceneTitle : SceneBase
     {
         var vp = Game.GraphicsDevice.Viewport;
         float w = vp.Width, h = vp.Height, cx = w * 0.5f, t = SceneTime;
-        // Need device flags — use empty-ish; focus ring uses last device from Update via a local
-        // Reconstruct light input flags from focus visibility by drawing ring always if focus exists
+
         Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Semantic.Background);
         VisualChrome.AmbientDust(Game, sb, vp, t, 32);
 
@@ -118,12 +117,9 @@ public sealed class SceneTitle : SceneBase
         UiKit.CenterLabel(Game, sb, "VOXELION", logoY + 96, DesignTokens.Semantic.TextPrimary, DesignTokens.Typography.Display, w);
         UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", logoY + 132, DesignTokens.Semantic.TextSecondary, DesignTokens.Typography.Body, w);
 
-        bool playH = _focus.IsFocused("play");
-        bool accH = _focus.IsFocused("account");
-        bool setH = _focus.IsFocused("settings");
-        VisualChrome.Button(Game, sb, _btnPlay, "PLAY", true, playH, false, DesignTokens.Typography.ButtonLarge);
-        VisualChrome.Button(Game, sb, _btnAccount, "ACCOUNT", false, accH, false, DesignTokens.Typography.Button);
-        VisualChrome.Button(Game, sb, _btnSettings, "SETTINGS", false, setH, false, DesignTokens.Typography.Button);
+        VisualChrome.Button(Game, sb, _btnPlay, "PLAY", true, _focus.IsFocused("play"), false, DesignTokens.Typography.ButtonLarge);
+        VisualChrome.Button(Game, sb, _btnAccount, "ACCOUNT", false, _focus.IsFocused("account"), false, DesignTokens.Typography.Button);
+        VisualChrome.Button(Game, sb, _btnSettings, "SETTINGS", false, _focus.IsFocused("settings"), false, DesignTokens.Typography.Button);
 
         VisualChrome.Panel(Game, sb, _btnLang, elevated: true);
         int li = Math.Max(0, Array.IndexOf(_langs, Game.Loc.Current));
@@ -132,8 +128,6 @@ public sealed class SceneTitle : SceneBase
             new Vector2(_btnLang.X + (_btnLang.Width - cs.X) * 0.5f, _btnLang.Y + 12),
             DesignTokens.Semantic.TextPrimary, 1.5f);
 
-        // Focus ring — always draw when we have focus index (keyboard/controller set LastDevice in manager)
-        // Use a synthetic state: show ring if focus was moved this session via Nav
         var ringInput = new InputState { LastDevice = InputDeviceKind.Controller };
         _focus.DrawFocus(Game, sb, ringInput, t);
         _focus.DrawShortcut(Game, sb, new InputState { LastDevice = InputDeviceKind.Keyboard }, _btnPlay, "ENTER");
