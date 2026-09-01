@@ -252,7 +252,7 @@ public sealed class Slider : UIElement
     public float Mapped => Min + (Max - Min) * Value;
 }
 
-public sealed class TextField : UIElement
+public class TextField : UIElement
 {
     public string Value { get; set; } = "";
     public string Placeholder { get; set; } = "";

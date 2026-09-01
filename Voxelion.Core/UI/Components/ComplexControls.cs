@@ -277,7 +277,7 @@ public sealed class Tooltip : UIElement
     }
 }
 
-public sealed class Modal : UIElement
+public class Modal : UIElement
 {
     public string Title { get; set; } = "";
     public bool Open { get; set; }
@@ -294,7 +294,7 @@ public sealed class Modal : UIElement
     }
 }
 
-public sealed class Dialog : Modal
+public class Dialog : Modal
 {
     public string Message { get; set; } = "";
     public string ConfirmLabel { get; set; } = "OK";
