@@ -18,7 +18,6 @@ public sealed class SceneSettings : SceneBase
     };
     private int _cat;
     private float _uiScale = 1f;
-    private float _textScale = 1f;
     private bool _reduceMotion;
     private bool _highReadability;
     private readonly Language[] _langs = { Language.English, Language.BahasaIndonesia, Language.Japanese, Language.Chinese, Language.Korean };

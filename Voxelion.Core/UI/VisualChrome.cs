@@ -68,7 +68,7 @@ public static class VisualChrome
 
         XnaColor fill = primary ? DesignTokens.Semantic.Primary : DesignTokens.Semantic.SurfaceElevated;
         if (pressed) fill *= 0.72f;
-        else if (hover) fill = primary ? fill * 0.92f : DesignTokens.Semantic.Hover * 2f + fill * 0.85f;
+        else if (hover) fill = primary ? fill * 0.92f : XnaColor.Lerp(fill, DesignTokens.Semantic.Primary, 0.25f);
 
         // Soft outer glow for primary
         if (primary && !pressed)
