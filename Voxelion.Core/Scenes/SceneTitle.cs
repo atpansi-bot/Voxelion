@@ -8,7 +8,6 @@ using Voxelion.Core.UI.Theme;
 
 namespace Voxelion.Core.Scenes;
 
-/// <summary>Title — FocusNav + InputAdaptive for all devices.</summary>
 public sealed class SceneTitle : SceneBase
 {
     private Rectangle _btnPlay, _btnAccount, _btnSettings, _btnLang;
@@ -70,15 +69,12 @@ public sealed class SceneTitle : SceneBase
         _focus.EndRegister();
         _focus.Update(input);
 
-        if (input.CancelPressed)
-            return;
-
         if (_focus.Activated(input, "lang", _btnLang))
         {
             int idx = Array.IndexOf(_langs, Game.Loc.Current);
             idx = (idx + 1) % _langs.Length;
             Game.Loc.Current = _langs[idx];
-            Game.Toasts.Push("LANGUAGE " + _langCodes[idx], ToastKind.Info);
+            Game.Toasts.Push(Game.Loc.T("lang.changed", _langCodes[idx]), ToastKind.Info);
             return;
         }
         if (_focus.Activated(input, "play", _btnPlay))
@@ -114,24 +110,29 @@ public sealed class SceneTitle : SceneBase
 
         float logoY = h * 0.18f;
         VisualChrome.Emblem(Game, sb, new Vector2(cx, logoY + 40), 48f);
-        UiKit.CenterLabel(Game, sb, "VOXELION", logoY + 96, DesignTokens.Semantic.TextPrimary, DesignTokens.Typography.Display, w);
-        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", logoY + 132, DesignTokens.Semantic.TextSecondary, DesignTokens.Typography.Body, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.name"), logoY + 96,
+            DesignTokens.Semantic.TextPrimary, TypeScale.Display, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.tagline"), logoY + 132,
+            DesignTokens.Semantic.TextSecondary, TypeScale.Body, w);
 
-        VisualChrome.Button(Game, sb, _btnPlay, "PLAY", true, _focus.IsFocused("play"), false, DesignTokens.Typography.ButtonLarge);
-        VisualChrome.Button(Game, sb, _btnAccount, "ACCOUNT", false, _focus.IsFocused("account"), false, DesignTokens.Typography.Button);
-        VisualChrome.Button(Game, sb, _btnSettings, "SETTINGS", false, _focus.IsFocused("settings"), false, DesignTokens.Typography.Button);
+        VisualChrome.Button(Game, sb, _btnPlay, Game.Loc.T("title.play"), true,
+            _focus.IsFocused("play"), false, TypeScale.Label);
+        VisualChrome.Button(Game, sb, _btnAccount, Game.Loc.T("title.account"), false,
+            _focus.IsFocused("account"), false, TypeScale.Label);
+        VisualChrome.Button(Game, sb, _btnSettings, Game.Loc.T("title.settings"), false,
+            _focus.IsFocused("settings"), false, TypeScale.Label);
 
         VisualChrome.Panel(Game, sb, _btnLang, elevated: true);
         int li = Math.Max(0, Array.IndexOf(_langs, Game.Loc.Current));
-        var cs = Game.MeasureText(_langCodes[li], 1.5f);
+        var cs = Game.MeasureText(_langCodes[li], TypeScale.Label);
         Game.DrawText(sb, _langCodes[li],
             new Vector2(_btnLang.X + (_btnLang.Width - cs.X) * 0.5f, _btnLang.Y + 12),
-            DesignTokens.Semantic.TextPrimary, 1.5f);
+            DesignTokens.Semantic.TextPrimary, TypeScale.Label);
 
         var ringInput = new InputState { LastDevice = InputDeviceKind.Controller };
         _focus.DrawFocus(Game, sb, ringInput, t);
-        _focus.DrawShortcut(Game, sb, new InputState { LastDevice = InputDeviceKind.Keyboard }, _btnPlay, "ENTER");
 
-        UiKit.CenterLabel(Game, sb, "V1.0.0", h * 0.94f, DesignTokens.Semantic.TextMuted, DesignTokens.Typography.Caption, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.version"), h * 0.94f,
+            DesignTokens.Semantic.TextMuted, TypeScale.Caption, w);
     }
 }

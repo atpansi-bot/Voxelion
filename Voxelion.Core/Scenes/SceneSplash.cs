@@ -29,13 +29,16 @@ public sealed class SceneSplash : SceneBase
         float a = DesignTokens.Motion.EaseOut(MathHelper.Clamp(t / 0.6f, 0, 1));
         VisualChrome.Emblem(Game, sb, new Vector2(cx, cy), 64f, a);
 
-        UiKit.CenterLabel(Game, sb, "VOXELION", cy + 80, DesignTokens.Semantic.TextPrimary * a, DesignTokens.Typography.Display, w);
-        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", cy + 118, DesignTokens.Semantic.TextSecondary * a, DesignTokens.Typography.Body, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.name"), cy + 80,
+            DesignTokens.Semantic.TextPrimary * a, TypeScale.Display, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.tagline"), cy + 118,
+            DesignTokens.Semantic.TextSecondary * a, TypeScale.Body, w);
 
         if (EnterTime >= 0.8f)
         {
             float sa = 0.45f + 0.35f * MathF.Sin(t * 3.5f);
-            UiKit.CenterLabel(Game, sb, "TAP TO CONTINUE", h * 0.86f, DesignTokens.Semantic.TextMuted * sa, DesignTokens.Typography.Body, w);
+            UiKit.CenterLabel(Game, sb, Game.Loc.T("splash.continue"), h * 0.86f,
+                DesignTokens.Semantic.TextMuted * sa, TypeScale.Body, w);
         }
     }
 }

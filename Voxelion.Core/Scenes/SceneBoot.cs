@@ -10,10 +10,11 @@ namespace Voxelion.Core.Scenes;
 public sealed class SceneBoot : SceneBase
 {
     private float _progress;
-    private readonly string[] _phases =
+    private readonly string[] _phaseKeys =
     {
-        "GRAPHICS", "INPUT", "AUDIO", "FONTS", "LOCALIZATION",
-        "UI THEME", "ASSETS", "SESSION", "NETWORK"
+        "boot.phase.graphics", "boot.phase.input", "boot.phase.audio", "boot.phase.fonts",
+        "boot.phase.localization", "boot.phase.ui", "boot.phase.assets", "boot.phase.session",
+        "boot.phase.network"
     };
 
     public SceneBoot(VoxelionGame game) : base(game) { }
@@ -37,10 +38,12 @@ public sealed class SceneBoot : SceneBase
         float a = DesignTokens.Motion.EaseOut(MathHelper.Clamp(_progress * 2f, 0, 1));
         VisualChrome.Emblem(Game, sb, new Vector2(cx, cy), 56f * (0.85f + 0.15f * a), a);
 
-        UiKit.CenterLabel(Game, sb, "VOXELION", cy + 72, DesignTokens.Semantic.TextPrimary * a, DesignTokens.Typography.Title, w);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("app.name"), cy + 72,
+            DesignTokens.Semantic.TextPrimary * a, TypeScale.Title, w);
 
-        int pi = Math.Min((int)(_progress * _phases.Length), _phases.Length - 1);
-        UiKit.CenterLabel(Game, sb, _phases[Math.Max(0, pi)], h * 0.72f, DesignTokens.Semantic.TextMuted, DesignTokens.Typography.BodySmall, w);
+        int pi = Math.Min((int)(_progress * _phaseKeys.Length), _phaseKeys.Length - 1);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T(_phaseKeys[Math.Max(0, pi)]), h * 0.72f,
+            DesignTokens.Semantic.TextMuted, TypeScale.Label, w);
 
         var bar = new Rectangle((int)(cx - 160), (int)(h * 0.80f), 320, (int)DesignTokens.Component.ProgressHeight);
         VisualChrome.ProgressCrystal(Game, sb, bar, _progress);
