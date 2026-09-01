@@ -10,13 +10,9 @@ namespace Voxelion.Core.Scenes;
 
 public sealed class SceneTitle : SceneBase
 {
-    private Rectangle _btnPlay, _btnAccount, _btnSettings, _btnLang;
+    private Rectangle _btnPlay, _btnAccount, _btnSettings;
     private readonly FocusNav _focus = new();
-    private readonly Language[] _langs =
-    {
-        Language.English, Language.BahasaIndonesia, Language.Japanese, Language.Chinese, Language.Korean
-    };
-    private readonly string[] _langCodes = { "EN", "ID", "JA", "ZH", "KO" };
+    private readonly LanguageSelector _lang = new() { Presentation = LanguageSelector.Mode.Chip };
 
     public SceneTitle(VoxelionGame game) : base(game) { }
 
@@ -41,11 +37,11 @@ public sealed class SceneTitle : SceneBase
         _btnPlay = play;
         _btnAccount = new Rectangle(play.X, play.Y + play.Height + (int)DesignTokens.Spacing.M, play.Width, play.Height);
         _btnSettings = new Rectangle(play.X, _btnAccount.Y + play.Height + (int)DesignTokens.Spacing.M, play.Width, play.Height);
-        _btnLang = UI.Layout.Box(LayoutBox.Default
+
+        _lang.Bounds = UI.Layout.ClampToSafe(UI.Layout.Box(LayoutBox.Default
             .WithAnchor(Anchor.TopRight)
-            .WithSize(72, 40)
-            .WithMargin(new Thickness(DesignTokens.Spacing.M)));
-        _btnLang = UI.Layout.ClampToSafe(_btnLang);
+            .WithSize(_lang.ChipWidth, 40)
+            .WithMargin(new Thickness(DesignTokens.Spacing.M))));
     }
 
     public override void Update(GameTime gameTime, InputState input)
@@ -65,18 +61,30 @@ public sealed class SceneTitle : SceneBase
         _focus.Register("play", _btnPlay, 0);
         _focus.Register("account", _btnAccount, 1);
         _focus.Register("settings", _btnSettings, 2);
-        _focus.Register("lang", _btnLang, 3);
+        _focus.Register("lang", _lang.Bounds, 3);
         _focus.EndRegister();
         _focus.Update(input);
 
-        if (_focus.Activated(input, "lang", _btnLang))
+        if (_lang.Update(input, Game.Loc, lang =>
+            {
+                Game.Settings.Language = lang;
+                Game.Settings.Save();
+                Game.Toasts.Push(Game.Loc.T("lang.changed", LanguageInfo.Get(lang).Code), ToastKind.Info);
+            }))
+            return;
+
+        // Focus confirm on lang chip cycles too
+        if (_focus.Activated(input, "lang") && !_lang.Bounds.Contains(input.PointerPosition))
         {
-            int idx = Array.IndexOf(_langs, Game.Loc.Current);
-            idx = (idx + 1) % _langs.Length;
-            Game.Loc.Current = _langs[idx];
-            Game.Toasts.Push(Game.Loc.T("lang.changed", _langCodes[idx]), ToastKind.Info);
+            int idx = (LanguageInfo.IndexOf(Game.Loc.Current) + 1) % LanguageInfo.All.Length;
+            var next = LanguageInfo.All[idx].Id;
+            Game.Loc.Current = next;
+            Game.Settings.Language = next;
+            Game.Settings.Save();
+            Game.Toasts.Push(Game.Loc.T("lang.changed", LanguageInfo.Get(next).Code), ToastKind.Info);
             return;
         }
+
         if (_focus.Activated(input, "play", _btnPlay))
         {
             Game.Session.Evaluate();
@@ -122,12 +130,7 @@ public sealed class SceneTitle : SceneBase
         VisualChrome.Button(Game, sb, _btnSettings, Game.Loc.T("title.settings"), false,
             _focus.IsFocused("settings"), false, TypeScale.Label);
 
-        VisualChrome.Panel(Game, sb, _btnLang, elevated: true);
-        int li = Math.Max(0, Array.IndexOf(_langs, Game.Loc.Current));
-        var cs = Game.MeasureText(_langCodes[li], TypeScale.Label);
-        Game.DrawText(sb, _langCodes[li],
-            new Vector2(_btnLang.X + (_btnLang.Width - cs.X) * 0.5f, _btnLang.Y + 12),
-            DesignTokens.Semantic.TextPrimary, TypeScale.Label);
+        _lang.Draw(Game, sb, Game.Loc, null);
 
         var ringInput = new InputState { LastDevice = InputDeviceKind.Controller };
         _focus.DrawFocus(Game, sb, ringInput, t);

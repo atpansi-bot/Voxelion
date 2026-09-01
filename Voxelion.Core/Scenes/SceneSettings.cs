@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Voxelion.Core.Core;
 using Voxelion.Core.Input;
+using Voxelion.Core.Data;
 using Voxelion.Core.Localization;
 using Voxelion.Core.UI;
 using Voxelion.Core.UI.Theme;
@@ -11,151 +12,179 @@ namespace Voxelion.Core.Scenes;
 public sealed class SceneSettings : SceneBase
 {
     private Rectangle _btnBack;
-    private readonly string[] _cats =
+    private readonly string[] _catKeys =
     {
-        "GRAPHICS", "AUDIO", "CONTROLS", "INTERFACE", "ACCESSIBILITY",
-        "LANGUAGE", "NOTIFICATIONS", "NETWORK", "PRIVACY", "ACCOUNT"
+        "settings.cat.graphics", "settings.cat.audio", "settings.cat.controls",
+        "settings.cat.interface", "settings.cat.accessibility", "settings.cat.language",
+        "settings.cat.notifications", "settings.cat.network", "settings.cat.privacy", "settings.cat.account"
     };
-    private int _cat;
-    private float _uiScale = 1f;
-    private bool _reduceMotion;
-    private bool _highReadability;
-    private readonly Language[] _langs = { Language.English, Language.BahasaIndonesia, Language.Japanese, Language.Chinese, Language.Korean };
-    private readonly string[] _langCodes = { "EN", "ID", "JA", "ZH", "KO" };
+    private int _cat = 5; // default open Language so selector is visible
+    private readonly LanguageSelector _lang = new() { Presentation = LanguageSelector.Mode.List };
+    private readonly FocusNav _focus = new();
 
     public SceneSettings(VoxelionGame game) : base(game) { }
 
     public override void OnEnter()
     {
         base.OnEnter();
-        Layout();
+        Relayout();
     }
 
-    private void Layout()
+    private void Relayout()
     {
-        var vp = Game.GraphicsDevice.Viewport;
-        float m = SafeLayout.Margin(vp);
-        _btnBack = new Rectangle((int)m, (int)m, 100, 40);
+        UI.Layout.Update(Game.GraphicsDevice.Viewport);
+        _btnBack = UI.Layout.ClampToSafe(UI.Layout.Box(LayoutBox.Default
+            .WithAnchor(Anchor.TopLeft)
+            .WithSize(120, 40)
+            .WithMargin(new Thickness(DesignTokens.Spacing.M))));
+
+        float panelX = UI.Layout.Safe.X + 200;
+        float panelW = UI.Layout.Safe.Width - 220;
+        _lang.Bounds = new Rectangle((int)panelX, UI.Layout.Safe.Y + 72, (int)Math.Min(panelW, 420), (int)_lang.RowHeight);
     }
 
     public override void Update(GameTime gameTime, InputState input)
     {
         base.Update(gameTime, input);
-        Layout();
-        if (!input.IsPointerReleased) return;
-        var p = input.PointerPosition;
-        var vp = Game.GraphicsDevice.Viewport;
-        float m = SafeLayout.Margin(vp);
+        Relayout();
 
-        if (_btnBack.Contains(p))
+        _focus.Clear();
+        _focus.Register("back", _btnBack, 0);
+        _focus.EndRegister();
+        _focus.Update(input);
+
+        if (_focus.Activated(input, "back", _btnBack) || input.CancelPressed)
         {
             if (Game.StateMachine.CanGoBack) Game.GoBack();
             else Game.TransitionTo(ApplicationState.Title);
             return;
         }
-        for (int i = 0; i < _cats.Length; i++)
+
+        if (!input.IsPointerReleased) return;
+        var p = input.PointerPosition;
+
+        for (int i = 0; i < _catKeys.Length; i++)
         {
-            var r = new Rectangle((int)m, (int)(m + 56 + i * 36), 180, 34);
+            var r = CatRect(i);
             if (r.Contains(p)) { _cat = i; return; }
         }
 
-        // Right panel interactions for selected category
-        float px = m + 200;
-        if (_cat == 3) // INTERFACE
+        if (_cat == 3) // interface
         {
-            var up = new Rectangle((int)px, (int)(m + 80), 120, 40);
-            var dn = new Rectangle((int)(px + 130), (int)(m + 80), 120, 40);
-            if (up.Contains(p)) { _uiScale = Math.Min(1.4f, _uiScale + 0.1f); Game.Toasts.Push("UI SCALE " + (int)(_uiScale * 100), ToastKind.Info); }
-            if (dn.Contains(p)) { _uiScale = Math.Max(0.8f, _uiScale - 0.1f); Game.Toasts.Push("UI SCALE " + (int)(_uiScale * 100), ToastKind.Info); }
-        }
-        if (_cat == 4) // ACCESSIBILITY
-        {
-            var rm = new Rectangle((int)px, (int)(m + 80), 200, 40);
-            var hr = new Rectangle((int)px, (int)(m + 130), 200, 40);
-            if (rm.Contains(p)) { _reduceMotion = !_reduceMotion; Game.Toasts.Push(_reduceMotion ? "REDUCED MOTION ON" : "REDUCED MOTION OFF", ToastKind.Info); }
-            if (hr.Contains(p)) { _highReadability = !_highReadability; Game.Toasts.Push(_highReadability ? "HIGH READABILITY ON" : "HIGH READABILITY OFF", ToastKind.Info); }
-        }
-        if (_cat == 5) // LANGUAGE
-        {
-            for (int i = 0; i < _langCodes.Length; i++)
+            float px = UI.Layout.Safe.X + 200;
+            float py = UI.Layout.Safe.Y + 80;
+            var up = new Rectangle((int)px, (int)py, 120, 40);
+            var dn = new Rectangle((int)(px + 130), (int)py, 120, 40);
+            if (up.Contains(p))
             {
-                var r = new Rectangle((int)px, (int)(m + 80 + i * 44), 100, 40);
-                if (r.Contains(p))
-                {
-                    Game.Loc.Current = _langs[i];
-                    Game.Toasts.Push("LANGUAGE " + _langCodes[i], ToastKind.Success);
-                }
+                Game.Settings.UiScale = Math.Min(1.4f, Game.Settings.UiScale + 0.1f);
+                Game.Settings.Save();
+                Game.Toasts.Push(Game.Loc.T("settings.ui_scale", (int)(Game.Settings.UiScale * 100)), ToastKind.Info);
+            }
+            if (dn.Contains(p))
+            {
+                Game.Settings.UiScale = Math.Max(0.8f, Game.Settings.UiScale - 0.1f);
+                Game.Settings.Save();
+                Game.Toasts.Push(Game.Loc.T("settings.ui_scale", (int)(Game.Settings.UiScale * 100)), ToastKind.Info);
             }
         }
-        if (_cat == 7) // NETWORK
+        if (_cat == 4)
         {
-            var tog = new Rectangle((int)px, (int)(m + 80), 200, 40);
+            float px = UI.Layout.Safe.X + 200;
+            float py = UI.Layout.Safe.Y + 80;
+            var rm = new Rectangle((int)px, (int)py, 220, 40);
+            var hr = new Rectangle((int)px, (int)(py + 50), 220, 40);
+            if (rm.Contains(p))
+            {
+                Game.Settings.ReduceMotion = !Game.Settings.ReduceMotion;
+                Game.Settings.Save();
+            }
+            if (hr.Contains(p))
+            {
+                Game.Settings.HighReadability = !Game.Settings.HighReadability;
+                Game.Settings.Save();
+            }
+        }
+        if (_cat == 5)
+        {
+            _lang.Update(input, Game.Loc, lang =>
+            {
+                Game.Settings.Language = lang;
+                Game.Settings.Save();
+                Game.Toasts.Push(Game.Loc.T("lang.changed", LanguageInfo.Get(lang).Code), ToastKind.Success);
+            });
+        }
+        if (_cat == 7)
+        {
+            float px = UI.Layout.Safe.X + 200;
+            var tog = new Rectangle((int)px, UI.Layout.Safe.Y + 80, 200, 40);
             if (tog.Contains(p))
             {
                 Game.Session.SetNetwork(!Game.Session.IsNetworkAvailable);
-                Game.Toasts.Push(Game.Session.IsNetworkAvailable ? "NETWORK ON" : "OFFLINE", ToastKind.Warning);
+                Game.Toasts.Push(Game.Session.IsNetworkAvailable
+                    ? Game.Loc.T("settings.network_on")
+                    : Game.Loc.T("settings.network_off"), ToastKind.Warning);
             }
         }
+    }
+
+    private Rectangle CatRect(int i)
+    {
+        var safe = UI.Layout.Safe;
+        return new Rectangle(safe.X + 8, safe.Y + 56 + i * 36, 180, 34);
     }
 
     public override void Draw(SpriteBatch sb, GameTime gameTime)
     {
         var vp = Game.GraphicsDevice.Viewport;
-        float w = vp.Width, h = vp.Height;
-        float m = SafeLayout.Margin(vp);
-        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.VoidBlack);
-        Game.DrawRect(sb, 0, 0, w, 56, DesignTokens.Color.PanelBase);
-        DrawBtn(sb, _btnBack, "BACK", DesignTokens.Color.PanelElevated);
-        UiKit.CenterLabel(Game, sb, "SETTINGS", 16, DesignTokens.Color.TextPrimary, 2.2f, w);
+        Game.DrawRect(sb, 0, 0, vp.Width, vp.Height, DesignTokens.Semantic.Background);
+        VisualChrome.AmbientDust(Game, sb, vp, SceneTime, 20);
 
-        for (int i = 0; i < _cats.Length; i++)
+        VisualChrome.Button(Game, sb, _btnBack, Game.Loc.T("settings.back"), false, false, false, TypeScale.Label);
+        UiKit.CenterLabel(Game, sb, Game.Loc.T("settings.title"), UI.Layout.Safe.Y + 8,
+            DesignTokens.Semantic.TextPrimary, TypeScale.Title, vp.Width);
+
+        for (int i = 0; i < _catKeys.Length; i++)
         {
-            var r = new Rectangle((int)m, (int)(m + 56 + i * 36), 180, 34);
-            var fill = i == _cat ? DesignTokens.Color.AccentPrimary : DesignTokens.Color.PanelElevated;
-            Game.DrawRect(sb, r, fill);
-            Game.DrawText(sb, _cats[i], new Vector2(r.X + 8, r.Y + 8), DesignTokens.Color.TextPrimary, 1.2f);
+            var r = CatRect(i);
+            bool sel = i == _cat;
+            VisualChrome.Tab(Game, sb, r, Game.Loc.T(_catKeys[i]), sel);
         }
 
-        float px = m + 200;
-        float py = m + 70;
-        Game.DrawText(sb, _cats[_cat], new Vector2(px, py), DesignTokens.Color.AccentSecondary, 2f);
+        float px = UI.Layout.Safe.X + 200;
+        float py = UI.Layout.Safe.Y + 72;
 
-        if (_cat == 3)
+        if (_cat == 5)
         {
-            Game.DrawText(sb, "UI SCALE " + (int)(_uiScale * 100) + "%", new Vector2(px, py + 40), DesignTokens.Color.TextSecondary, 1.4f);
-            DrawBtn(sb, new Rectangle((int)px, (int)(py + 70), 120, 40), "PLUS", DesignTokens.Color.PanelElevated);
-            DrawBtn(sb, new Rectangle((int)(px + 130), (int)(py + 70), 120, 40), "MINUS", DesignTokens.Color.PanelElevated);
+            _lang.Presentation = LanguageSelector.Mode.List;
+            _lang.Bounds = new Rectangle((int)px, (int)py, (int)Math.Min(UI.Layout.Safe.Width - 220, 440), (int)_lang.RowHeight);
+            _lang.Draw(Game, sb, Game.Loc, null);
+        }
+        else if (_cat == 3)
+        {
+            gameLabel(sb, Game.Loc.T("settings.ui_scale", (int)(Game.Settings.UiScale * 100)), px, py);
+            VisualChrome.Button(Game, sb, new Rectangle((int)px, (int)(py + 40), 120, 40), "+", false, false, false, TypeScale.Label);
+            VisualChrome.Button(Game, sb, new Rectangle((int)(px + 130), (int)(py + 40), 120, 40), "-", false, false, false, TypeScale.Label);
         }
         else if (_cat == 4)
         {
-            DrawBtn(sb, new Rectangle((int)px, (int)(py + 50), 220, 40), _reduceMotion ? "MOTION REDUCED" : "REDUCE MOTION", DesignTokens.Color.PanelElevated);
-            DrawBtn(sb, new Rectangle((int)px, (int)(py + 100), 220, 40), _highReadability ? "READABILITY ON" : "HIGH READABILITY", DesignTokens.Color.PanelElevated);
-        }
-        else if (_cat == 5)
-        {
-            for (int i = 0; i < _langCodes.Length; i++)
-            {
-                bool sel = Game.Loc.Current == _langs[i];
-                DrawBtn(sb, new Rectangle((int)px, (int)(py + 50 + i * 44), 100, 40), _langCodes[i],
-                    sel ? DesignTokens.Color.AccentPrimary : DesignTokens.Color.PanelElevated);
-            }
+            VisualChrome.Button(Game, sb, new Rectangle((int)px, (int)py, 240, 40),
+                Game.Settings.ReduceMotion ? "REDUCED MOTION ON" : "REDUCED MOTION OFF", false, false, false, TypeScale.Caption);
+            VisualChrome.Button(Game, sb, new Rectangle((int)px, (int)(py + 50), 240, 40),
+                Game.Settings.HighReadability ? "HIGH READABILITY ON" : "HIGH READABILITY OFF", false, false, false, TypeScale.Caption);
         }
         else if (_cat == 7)
         {
-            string net = Game.Session.IsNetworkAvailable ? "ONLINE" : "OFFLINE";
-            Game.DrawText(sb, "STATUS " + net, new Vector2(px, py + 40), DesignTokens.Color.TextSecondary, 1.4f);
-            DrawBtn(sb, new Rectangle((int)px, (int)(py + 70), 200, 40), "TOGGLE NETWORK", DesignTokens.Color.PanelElevated);
+            VisualChrome.Button(Game, sb, new Rectangle((int)px, (int)py, 220, 40),
+                Game.Session.IsNetworkAvailable ? Game.Loc.T("settings.network_on") : Game.Loc.T("settings.network_off"),
+                false, false, false, TypeScale.Label);
         }
         else
-            Game.DrawText(sb, "OPTIONS FOR THIS CATEGORY ARE UI SHELLS", new Vector2(px, py + 50), DesignTokens.Color.TextMuted, 1.3f);
+        {
+            gameLabel(sb, Game.Loc.T(_catKeys[_cat]), px, py);
+        }
     }
 
-    private void DrawBtn(SpriteBatch sb, Rectangle r, string label, Color fill)
-    {
-        Game.DrawRect(sb, r, fill);
-        Game.DrawBorder(sb, r, DesignTokens.Color.BorderFocus, 1);
-        var size = Game.MeasureText(label, 1.3f);
-        Game.DrawText(sb, label, new Vector2(r.X + (r.Width - size.X) * 0.5f, r.Y + (r.Height - size.Y) * 0.5f),
-            DesignTokens.Color.TextPrimary, 1.3f);
-    }
+    private void gameLabel(SpriteBatch sb, string t, float x, float y) =>
+        Game.DrawText(sb, t, new Vector2(x, y), DesignTokens.Semantic.TextSecondary, TypeScale.Body);
 }

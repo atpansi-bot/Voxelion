@@ -23,6 +23,7 @@ public sealed class VoxelionGame : Game
     private readonly SessionService _session = new();
     private readonly PlayerProfile _profile = new();
     private readonly NotificationBus _toasts = new();
+    private readonly UserSettingsStore _settings = new();
 
     private SceneBase? _currentScene;
     private readonly Dictionary<ApplicationState, Func<SceneBase>> _sceneFactories = new();
@@ -33,6 +34,7 @@ public sealed class VoxelionGame : Game
     public PlayerProfile Profile => _profile;
     public ApplicationStateMachine StateMachine => _stateMachine;
     public NotificationBus Toasts => _toasts;
+    public UserSettingsStore Settings => _settings;
     public Texture2D Pixel => _pixel;
     public PixelFont Font => _font;
     public SpriteBatch SpriteBatch => _spriteBatch;
@@ -51,6 +53,7 @@ public sealed class VoxelionGame : Game
         _graphics.SynchronizeWithVerticalRetrace = true;
         IsFixedTimeStep = true;
         TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 60.0);
+        _loc.Current = _settings.Language;
         RegisterScenes();
     }
 
