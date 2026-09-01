@@ -27,9 +27,9 @@ public sealed class SceneTitle : SceneBase
         var vp = Game.GraphicsDevice.Viewport;
         float cx = vp.Width * 0.5f;
         float bw = Math.Min(280f, SafeLayout.SafeWidth(vp) * 0.55f);
-        float bh = Math.Max(SafeLayout.TouchMin, 52f);
+        float bh = Math.Max(DesignTokens.Layout.MinTouchTarget, DesignTokens.Component.ButtonHeight);
         float y = vp.Height * 0.52f;
-        float gap = 14f;
+        float gap = DesignTokens.Spacing.M;
         _btnPlay = new Rectangle((int)(cx - bw * 0.5f), (int)y, (int)bw, (int)bh);
         _btnAccount = new Rectangle((int)(cx - bw * 0.5f), (int)(y + bh + gap), (int)bw, (int)bh);
         _btnSettings = new Rectangle((int)(cx - bw * 0.5f), (int)(y + 2 * (bh + gap)), (int)bw, (int)bh);
@@ -79,43 +79,26 @@ public sealed class SceneTitle : SceneBase
     {
         var vp = Game.GraphicsDevice.Viewport;
         float w = vp.Width, h = vp.Height, cx = w * 0.5f, t = SceneTime;
-        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.VoidBlack);
-        for (int i = 0; i < 28; i++)
-        {
-            float px = (MathF.Sin(t * 0.12f + i) * 0.5f + 0.5f) * w;
-            float py = (MathF.Cos(t * 0.09f + i * 1.5f) * 0.5f + 0.5f) * h;
-            Game.DrawRect(sb, px, py, 2, 2, DesignTokens.Color.AccentPrimary * 0.15f);
-        }
+        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Semantic.Background);
+        VisualChrome.AmbientDust(Game, sb, vp, t, 32);
 
         float logoY = h * 0.18f;
-        float size = 48f;
-        Game.DrawRect(sb, cx - size * 0.55f, logoY, size * 1.1f, size * 1.1f, DesignTokens.Color.AccentPrimary);
-        Game.DrawRect(sb, cx - size * 0.28f, logoY + size * 0.27f, size * 0.56f, size * 0.56f, DesignTokens.Color.AccentSecondary);
-        UiKit.CenterLabel(Game, sb, "VOXELION", logoY + size + 16, DesignTokens.Color.TextPrimary, 4f, w);
-        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", logoY + size + 52, DesignTokens.Color.TextSecondary, 1.6f, w);
+        VisualChrome.Emblem(Game, sb, new Vector2(cx, logoY + 40), 48f);
+        UiKit.CenterLabel(Game, sb, "VOXELION", logoY + 96, DesignTokens.Semantic.TextPrimary, DesignTokens.Typography.Display, w);
+        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", logoY + 132, DesignTokens.Semantic.TextSecondary, DesignTokens.Typography.Body, w);
 
-        DrawBtn(sb, _btnPlay, "PLAY", DesignTokens.Color.AccentPrimary, "play");
-        DrawBtn(sb, _btnAccount, "ACCOUNT", DesignTokens.Color.PanelElevated, "account");
-        DrawBtn(sb, _btnSettings, "SETTINGS", DesignTokens.Color.PanelBase, "settings");
+        var input = new InputState(); // draw-only hover approx via pointer not needed for static
+        VisualChrome.Button(Game, sb, _btnPlay, "PLAY", true, false, false, DesignTokens.Typography.ButtonLarge);
+        VisualChrome.Button(Game, sb, _btnAccount, "ACCOUNT", false, false, false, DesignTokens.Typography.Button);
+        VisualChrome.Button(Game, sb, _btnSettings, "SETTINGS", false, false, false, DesignTokens.Typography.Button);
 
-        // Language chip
-        UiKit.Panel(Game, sb, _btnLang, DesignTokens.Color.PanelElevated, DesignTokens.Color.BorderFocus, 1);
+        VisualChrome.Panel(Game, sb, _btnLang, elevated: true);
         int li = Math.Max(0, Array.IndexOf(_langs, Game.Loc.Current));
-        string code = _langCodes[li];
-        var cs = Game.MeasureText(code, 1.5f);
-        Game.DrawText(sb, code, new Vector2(_btnLang.X + (_btnLang.Width - cs.X) * 0.5f, _btnLang.Y + 12), DesignTokens.Color.TextPrimary, 1.5f);
+        var cs = Game.MeasureText(_langCodes[li], 1.5f);
+        Game.DrawText(sb, _langCodes[li],
+            new Vector2(_btnLang.X + (_btnLang.Width - cs.X) * 0.5f, _btnLang.Y + 12),
+            DesignTokens.Semantic.TextPrimary, 1.5f);
 
-        UiKit.CenterLabel(Game, sb, "V1.0.0", h * 0.94f, DesignTokens.Color.TextMuted, 1.2f, w);
-    }
-
-    private void DrawBtn(SpriteBatch sb, Rectangle r, string label, Color fill, string icon)
-    {
-        Game.DrawRect(sb, r, fill);
-        Game.DrawBorder(sb, r, DesignTokens.Color.BorderFocus, 2);
-        var iconR = new Rectangle(r.X + 16, r.Y + (r.Height - 28) / 2, 28, 28);
-        Game.DrawIcon(sb, icon, iconR, DesignTokens.Color.TextPrimary);
-        var size = Game.MeasureText(label, 2.1f);
-        Game.DrawText(sb, label, new Vector2(r.X + (r.Width - size.X) * 0.5f + 8, r.Y + (r.Height - size.Y) * 0.5f),
-            DesignTokens.Color.TextPrimary, 2.1f);
+        UiKit.CenterLabel(Game, sb, "V1.0.0", h * 0.94f, DesignTokens.Semantic.TextMuted, DesignTokens.Typography.Caption, w);
     }
 }

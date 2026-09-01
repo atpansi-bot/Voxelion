@@ -6,18 +6,24 @@ using Voxelion.Core.UI.Theme;
 
 namespace Voxelion.Core.UI;
 
-/// <summary>Shared draw/hit helpers for panels, buttons, bars — used by all scenes.</summary>
+/// <summary>Shared UI helpers — routes through VisualChrome for premium look.</summary>
 public static class UiKit
 {
     public static void Panel(VoxelionGame g, SpriteBatch sb, Rectangle r, Color? fill = null, Color? border = null, int borderW = 2)
     {
-        g.DrawRect(sb, r, fill ?? DesignTokens.Color.PanelElevated);
+        // Prefer chrome panel; fall back tint if custom fill requested
+        if (fill == null && border == null)
+        {
+            VisualChrome.Panel(g, sb, r, elevated: true, glow: false);
+            return;
+        }
+        g.DrawRect(sb, r, fill ?? DesignTokens.Semantic.SurfaceElevated);
         if (borderW > 0)
-            g.DrawBorder(sb, r, border ?? DesignTokens.Color.BorderSubtle, borderW);
+            g.DrawBorder(sb, r, border ?? DesignTokens.Semantic.Border, borderW);
     }
 
     public static void Dim(VoxelionGame g, SpriteBatch sb, Viewport vp, float alpha = 0.65f) =>
-        g.DrawRect(sb, 0, 0, vp.Width, vp.Height, DesignTokens.Color.OverlayDim * alpha);
+        g.DrawRect(sb, 0, 0, vp.Width, vp.Height, DesignTokens.Semantic.Overlay * alpha);
 
     public static bool Button(
         VoxelionGame g, SpriteBatch sb, InputState input, Rectangle r, string label,
@@ -27,25 +33,14 @@ public static class UiKit
         bool down = hover && input.IsPointerDown;
         if (draw)
         {
-            Color bg = down ? fill * 0.75f : hover ? fill * 0.9f : fill;
-            g.DrawRect(sb, r, bg);
-            g.DrawBorder(sb, r, DesignTokens.Color.BorderFocus, 2);
-            var size = g.MeasureText(label, textScale);
-            g.DrawText(sb, label,
-                new Vector2(r.X + (r.Width - size.X) * 0.5f, r.Y + (r.Height - size.Y) * 0.5f),
-                DesignTokens.Color.TextPrimary, textScale);
+            bool primary = fill.R > 100 && fill.B > 100; // rough: violet-ish
+            VisualChrome.Button(g, sb, r, label, primary, hover, down, textScale);
         }
         return hover && input.IsPointerReleased;
     }
 
-    public static void ProgressBar(VoxelionGame g, SpriteBatch sb, Rectangle track, float progress, Color fill)
-    {
-        g.DrawRect(sb, track, DesignTokens.Color.ShadowIndigo);
-        float w = track.Width * MathHelper.Clamp(progress, 0, 1);
-        if (w >= 1)
-            g.DrawRect(sb, track.X, track.Y, w, track.Height, fill);
-        g.DrawBorder(sb, track, DesignTokens.Color.BorderSubtle, 1);
-    }
+    public static void ProgressBar(VoxelionGame g, SpriteBatch sb, Rectangle track, float progress, Color fill) =>
+        VisualChrome.ProgressCrystal(g, sb, track, progress);
 
     public static void Label(VoxelionGame g, SpriteBatch sb, string text, Vector2 pos, Color color, float scale = 1.5f) =>
         g.DrawText(sb, text, pos, color, scale);

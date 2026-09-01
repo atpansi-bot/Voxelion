@@ -23,23 +23,19 @@ public sealed class SceneSplash : SceneBase
     {
         var vp = Game.GraphicsDevice.Viewport;
         float w = vp.Width, h = vp.Height, cx = w * 0.5f, cy = h * 0.42f, t = SceneTime;
-        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.DeepNight);
-        for (int i = 0; i < 40; i++)
-        {
-            float px = (MathF.Sin(t * 0.25f + i) * 0.5f + 0.5f) * w;
-            float py = (MathF.Cos(t * 0.16f + i * 1.2f) * 0.5f + 0.5f) * h;
-            Game.DrawRect(sb, px, py, 2, 2, DesignTokens.Color.AccentSecondary * 0.2f);
-        }
-        float a = EaseOutCubic(MathHelper.Clamp(t / 0.6f, 0, 1));
-        float s = 64f;
-        Game.DrawRect(sb, cx - s * 0.55f, cy - s * 0.55f, s * 1.1f, s * 1.1f, DesignTokens.Color.AccentPrimary * a);
-        Game.DrawRect(sb, cx - s * 0.28f, cy - s * 0.28f, s * 0.56f, s * 0.56f, DesignTokens.Color.AccentSecondary * a);
-        UiKit.CenterLabel(Game, sb, "VOXELION", cy + s + 20, DesignTokens.Color.TextPrimary * a, 3.5f, w);
-        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", cy + s + 56, DesignTokens.Color.TextSecondary * a, 1.5f, w);
+        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Semantic.BackgroundAlt);
+        VisualChrome.AmbientDust(Game, sb, vp, t, 44);
+
+        float a = DesignTokens.Motion.EaseOut(MathHelper.Clamp(t / 0.6f, 0, 1));
+        VisualChrome.Emblem(Game, sb, new Vector2(cx, cy), 64f, a);
+
+        UiKit.CenterLabel(Game, sb, "VOXELION", cy + 80, DesignTokens.Semantic.TextPrimary * a, DesignTokens.Typography.Display, w);
+        UiKit.CenterLabel(Game, sb, "ENTER THE FRONTIER", cy + 118, DesignTokens.Semantic.TextSecondary * a, DesignTokens.Typography.Body, w);
+
         if (EnterTime >= 0.8f)
         {
             float sa = 0.45f + 0.35f * MathF.Sin(t * 3.5f);
-            UiKit.CenterLabel(Game, sb, "TAP TO CONTINUE", h * 0.86f, DesignTokens.Color.TextMuted * sa, 1.6f, w);
+            UiKit.CenterLabel(Game, sb, "TAP TO CONTINUE", h * 0.86f, DesignTokens.Semantic.TextMuted * sa, DesignTokens.Typography.Body, w);
         }
     }
 }

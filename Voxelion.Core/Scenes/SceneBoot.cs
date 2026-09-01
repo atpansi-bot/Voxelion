@@ -31,23 +31,18 @@ public sealed class SceneBoot : SceneBase
     {
         var vp = Game.GraphicsDevice.Viewport;
         float w = vp.Width, h = vp.Height, cx = w * 0.5f, cy = h * 0.42f;
-        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Color.VoidBlack);
-        float t = SceneTime;
-        for (int i = 0; i < 36; i++)
-        {
-            float px = (MathF.Sin(t * 0.2f + i * 1.7f) * 0.5f + 0.5f) * w;
-            float py = (MathF.Cos(t * 0.14f + i * 2.1f) * 0.5f + 0.5f) * h;
-            Game.DrawRect(sb, px, py, 2 + i % 3, 2 + i % 3, DesignTokens.Color.AccentPrimary * 0.2f);
-        }
-        float a = EaseOutCubic(MathHelper.Clamp(_progress * 2f, 0, 1));
-        float s = 56f;
-        Game.DrawRect(sb, cx - s * 1.3f, cy - s * 1.3f, s * 2.6f, s * 2.6f, DesignTokens.Color.GlowPrimary * a * 0.4f);
-        Game.DrawRect(sb, cx - s * 0.55f, cy - s * 0.55f, s * 1.1f, s * 1.1f, DesignTokens.Color.AccentPrimary * a);
-        Game.DrawRect(sb, cx - s * 0.28f, cy - s * 0.28f, s * 0.56f, s * 0.56f, DesignTokens.Color.AccentSecondary * a);
-        UiKit.CenterLabel(Game, sb, "VOXELION", cy + s + 18, DesignTokens.Color.TextPrimary * a, 3f, w);
+        Game.DrawRect(sb, 0, 0, w, h, DesignTokens.Semantic.Background);
+        VisualChrome.AmbientDust(Game, sb, vp, SceneTime, 36);
+
+        float a = DesignTokens.Motion.EaseOut(MathHelper.Clamp(_progress * 2f, 0, 1));
+        VisualChrome.Emblem(Game, sb, new Vector2(cx, cy), 56f * (0.85f + 0.15f * a), a);
+
+        UiKit.CenterLabel(Game, sb, "VOXELION", cy + 72, DesignTokens.Semantic.TextPrimary * a, DesignTokens.Typography.Title, w);
+
         int pi = Math.Min((int)(_progress * _phases.Length), _phases.Length - 1);
-        UiKit.CenterLabel(Game, sb, _phases[Math.Max(0, pi)], h * 0.72f, DesignTokens.Color.TextMuted, 1.4f, w);
-        var bar = new Rectangle((int)(cx - 160), (int)(h * 0.80f), 320, 10);
-        UiKit.ProgressBar(Game, sb, bar, _progress, DesignTokens.Color.AccentPrimary);
+        UiKit.CenterLabel(Game, sb, _phases[Math.Max(0, pi)], h * 0.72f, DesignTokens.Semantic.TextMuted, DesignTokens.Typography.BodySmall, w);
+
+        var bar = new Rectangle((int)(cx - 160), (int)(h * 0.80f), 320, (int)DesignTokens.Component.ProgressHeight);
+        VisualChrome.ProgressCrystal(Game, sb, bar, _progress);
     }
 }
